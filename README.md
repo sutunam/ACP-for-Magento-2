@@ -4,13 +4,35 @@ Enable ChatGPT purchases directly from your Magento 2 store using the **Agentic 
 
 ## Features
 
-- ✅ Full ACP REST API implementation
-- ✅ Create, update, get, complete, and cancel checkout sessions
-- ✅ Automatic cart total calculation
-- ✅ Currency support from Magento store config
-- ✅ Comprehensive unit and integration tests
+### Core Functionality
+- ✅ Full ACP REST API implementation (5 endpoints)
+- ✅ Database persistence with proper ResourceModel pattern
+- ✅ Magento Quote integration (real pricing, taxes, discounts)
+- ✅ Stripe Delegated Payment Spec support with SDK
+- ✅ Product feed generator for ChatGPT discovery
+- ✅ Webhook notifications for order events
+- ✅ Multi-currency support with conversion
+
+### Security & Authentication
+- ✅ Bearer token API authentication
+- ✅ HMAC webhook signatures
+- ✅ Encrypted API key storage
+- ✅ Rate limiting ready
+- ✅ ACL permissions
+
+### Admin Features
+- ✅ Complete admin configuration panel
+- ✅ API key management
+- ✅ Stripe settings (test/live mode)
+- ✅ Product feed configuration
+- ✅ Webhook endpoint setup
+
+### Developer Experience
+- ✅ Comprehensive unit tests (20+ test cases)
+- ✅ Integration tests for API endpoints
 - ✅ GitHub Actions CI/CD pipeline
 - ✅ PSR-12 compliant code
+- ✅ Proper error handling with ACP error codes
 - ✅ Magento 2.4.6+ compatible
 
 ## Requirements
@@ -31,13 +53,43 @@ bin/magento cache:flush
 
 ## API Endpoints
 
-The module exposes the following REST API endpoints according to the ACP specification:
+### ACP Checkout API (Requires Bearer Token)
 
 - `POST /rest/V1/acp/checkout_sessions` - Create checkout session
 - `GET /rest/V1/acp/checkout_sessions/:id` - Get checkout session
-- `POST /rest/V1/acp/checkout_sessions/:id` - Update checkout session
-- `POST /rest/V1/acp/checkout_sessions/:id/complete` - Complete checkout
-- `POST /rest/V1/acp/checkout_sessions/:id/cancel` - Cancel checkout
+- `POST /rest/V1/acp/checkout_sessions/:id` - Update checkout session (items, address, buyer)
+- `POST /rest/V1/acp/checkout_sessions/:id/complete` - Complete checkout & create order
+- `POST /rest/V1/acp/checkout_sessions/:id/cancel` - Cancel checkout session
+
+### Product Feed (Public)
+
+- `GET /acp/feed` - Product feed for ChatGPT discovery
+
+All ACP endpoints require `Authorization: Bearer <api-key>` header.
+
+## Configuration
+
+After installation, configure the module in **Stores > Configuration > Agentic Commerce Protocol**:
+
+### General Settings
+1. **Enable Module** - Turn the module on/off
+2. **API Key** - Generate and enter your API key for OpenAI authentication
+3. **Test Mode** - Enable for additional logging during development
+
+### Product Feed Settings
+1. **Enable Product Feed** - Allow ChatGPT to discover your products
+2. **Include Categories** - Select which categories to expose (empty = all)
+3. **Maximum Products** - Limit feed size (default: 1000)
+
+### Webhook Settings
+1. **Enable Webhooks** - Send order events to OpenAI
+2. **Endpoint URL** - OpenAI webhook receiver URL
+3. **Signing Secret** - Secret for HMAC signature generation
+
+### Stripe Payment Settings
+1. **Enable Stripe Payments** - Use Stripe for payment processing
+2. **Secret Key** - Your Stripe API key (sk_live_... or sk_test_...)
+3. **Test Mode** - Use Stripe test environment
 
 ## Development
 
