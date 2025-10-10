@@ -108,6 +108,22 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
             $needsSave = true;
         }
 
+        // Update shipping method if fulfillment_option_id provided
+        if (isset($requestData['fulfillment_option_id']) && $quote) {
+            $shippingMethodCode = $requestData['fulfillment_option_id'];
+            $shippingAddress = $quote->getShippingAddress();
+
+            if ($shippingAddress && $shippingAddress->getCountryId()) {
+                $shippingAddress->setShippingMethod($shippingMethodCode);
+                $shippingAddress->setCollectShippingRates(true);
+                $quote->collectTotals();
+                $this->cartRepository->save($quote);
+
+                $session->setData('fulfillment_option_id', $shippingMethodCode);
+                $needsSave = true;
+            }
+        }
+
         // Recalculate total if quote was modified
         if ($quote && $needsSave) {
             $session->setTotal($this->quoteManagement->getQuoteTotal($quote));

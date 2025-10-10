@@ -72,6 +72,12 @@ class CheckoutSessionResponseBuilder
             $response['fulfillment_address'] = json_decode($fulfillmentAddress, true);
         }
 
+        // Add selected fulfillment option if set
+        $fulfillmentOptionId = $session->getData('fulfillment_option_id');
+        if ($fulfillmentOptionId) {
+            $response['selected_fulfillment_option_id'] = $fulfillmentOptionId;
+        }
+
         // Add order details if completed
         if ($session->getStatus() === 'completed') {
             $orderId = $session->getData('order_id');
