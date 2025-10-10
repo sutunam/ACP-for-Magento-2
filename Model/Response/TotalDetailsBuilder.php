@@ -43,25 +43,37 @@ class TotalDetailsBuilder
 
         return [
             'subtotal_amount' => [
-                'amount' => round($subtotal, 2),
+                'amount' => $this->convertToCents($subtotal),
                 'currency' => $currencyCode
             ],
             'shipping_amount' => [
-                'amount' => round($shippingAmount, 2),
+                'amount' => $this->convertToCents($shippingAmount),
                 'currency' => $currencyCode
             ],
             'tax_amount' => [
-                'amount' => round($taxAmount, 2),
+                'amount' => $this->convertToCents($taxAmount),
                 'currency' => $currencyCode
             ],
             'discount_amount' => [
-                'amount' => round($discountAmount, 2),
+                'amount' => $this->convertToCents($discountAmount),
                 'currency' => $currencyCode
             ],
             'total_amount' => [
-                'amount' => round($grandTotal, 2),
+                'amount' => $this->convertToCents($grandTotal),
                 'currency' => $currencyCode
             ]
         ];
+    }
+
+    /**
+     * Convert dollar amount to cents (integer)
+     * ACP spec requires monetary values as non-negative integers
+     *
+     * @param float $amount
+     * @return int
+     */
+    private function convertToCents(float $amount): int
+    {
+        return (int)round($amount * 100);
     }
 }

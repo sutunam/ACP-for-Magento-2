@@ -76,7 +76,7 @@ class FulfillmentOptionsBuilder
             'id' => $fullCode,
             'type' => 'shipping',
             'amount' => [
-                'amount' => round((float)$method->getAmount(), 2),
+                'amount' => $this->convertToCents((float)$method->getAmount()),
                 'currency' => $currencyCode
             ],
             'description' => $method->getCarrierTitle() . ' - ' . $method->getMethodTitle(),
@@ -91,6 +91,18 @@ class FulfillmentOptionsBuilder
         }
 
         return $option;
+    }
+
+    /**
+     * Convert dollar amount to cents (integer)
+     * ACP spec requires monetary values as non-negative integers
+     *
+     * @param float $amount
+     * @return int
+     */
+    private function convertToCents(float $amount): int
+    {
+        return (int)round($amount * 100);
     }
 
     /**

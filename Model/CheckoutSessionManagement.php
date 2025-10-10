@@ -54,7 +54,7 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
 
         $session = $this->checkoutSessionFactory->create();
         $session->setCheckoutSessionId($checkoutSessionId);
-        $session->setStatus('open');
+        $session->setStatus('not_ready_for_payment'); // ACP spec status
         $session->setItems($requestData['items']);
         $session->setCurrency($quote->getQuoteCurrencyCode());
         $session->setTotal($this->quoteManagement->getQuoteTotal($quote));
@@ -113,6 +113,14 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
             $session->setTotal($this->quoteManagement->getQuoteTotal($quote));
         }
 
+        // Update status to ready_for_payment if shipping address and buyer are set
+        if ($session->getData('fulfillment_address') && $session->getData('buyer_info')) {
+            if ($session->getStatus() === 'not_ready_for_payment') {
+                $session->setStatus('ready_for_payment'); // ACP spec status
+                $needsSave = true;
+            }
+        }
+
         if ($needsSave) {
             $this->sessionRepository->save($session);
         }
@@ -129,8 +137,8 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
     {
         $session = $this->get($checkoutSessionId);
 
-        if ($session->getStatus() !== 'open') {
-            throw new LocalizedException(__('Cannot complete a checkout session that is not open'));
+        if ($session->getStatus() !== 'ready_for_payment') {
+            throw new LocalizedException(__('Cannot complete a checkout session that is not ready for payment'));
         }
 
         $requestData = is_string($data) ? json_decode($data, true) : $data;
@@ -170,7 +178,7 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
             throw new LocalizedException(__('Cannot cancel a completed checkout session'));
         }
 
-        $session->setStatus('canceled');
+        $session->setStatus('cancelled'); // ACP spec uses UK spelling
         $session->setData('canceled_at', date('Y-m-d H:i:s'));
 
         $this->sessionRepository->save($session);

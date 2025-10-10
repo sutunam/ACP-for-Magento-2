@@ -49,7 +49,7 @@ class LineItemBuilder
     {
         $qty = (int)$item->getQty();
 
-        // Calculate amounts
+        // Calculate amounts - convert to cents (integers) per ACP spec
         $baseAmount = $item->getPrice() * $qty;
         $discountAmount = (float)$item->getDiscountAmount();
         $taxAmount = (float)$item->getTaxAmount();
@@ -61,21 +61,33 @@ class LineItemBuilder
             'sku' => $item->getSku(),
             'quantity' => $qty,
             'base_amount' => [
-                'amount' => round($baseAmount, 2),
+                'amount' => $this->convertToCents($baseAmount),
                 'currency' => $currencyCode
             ],
             'discount_amount' => [
-                'amount' => round($discountAmount, 2),
+                'amount' => $this->convertToCents($discountAmount),
                 'currency' => $currencyCode
             ],
             'tax_amount' => [
-                'amount' => round($taxAmount, 2),
+                'amount' => $this->convertToCents($taxAmount),
                 'currency' => $currencyCode
             ],
             'total_amount' => [
-                'amount' => round($totalAmount, 2),
+                'amount' => $this->convertToCents($totalAmount),
                 'currency' => $currencyCode
             ]
         ];
+    }
+
+    /**
+     * Convert dollar amount to cents (integer)
+     * ACP spec requires monetary values as non-negative integers
+     *
+     * @param float $amount
+     * @return int
+     */
+    private function convertToCents(float $amount): int
+    {
+        return (int)round($amount * 100);
     }
 }
