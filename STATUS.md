@@ -3,6 +3,8 @@
 **Last Updated:** October 10, 2025
 **Version:** 1.5-beta (Pre-Production)
 
+> ⚠️ **IMPORTANT:** This module is spec-compliant and passes all internal tests, but has NOT been tested with the actual OpenAI ChatGPT platform. Do not use in production until platform access is granted and live testing is complete.
+
 ---
 
 ## Current Status: PRE-PRODUCTION ⚠️
