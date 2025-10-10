@@ -17,6 +17,8 @@ use Magento\Quote\Api\CartManagementInterface;
 use Magento\Quote\Api\CartRepositoryInterface;
 use Magento\Quote\Model\Quote;
 use Magento\Store\Model\StoreManagerInterface;
+use RunAsRoot\AgenticCommerceProtocol\Exception\InvalidProductException;
+use RunAsRoot\AgenticCommerceProtocol\Exception\OutOfStockException;
 
 /**
  * Manages Magento Quote creation and manipulation for ACP sessions
@@ -96,7 +98,7 @@ class QuoteManagement
 
             // Validate product is salable
             if (!$product->isSalable()) {
-                throw new LocalizedException(
+                throw new OutOfStockException(
                     __('Product %1 is not available for sale', $sku)
                 );
             }
@@ -104,7 +106,7 @@ class QuoteManagement
             // Add to quote
             $quote->addProduct($product, $quantity);
         } catch (NoSuchEntityException $e) {
-            throw new LocalizedException(
+            throw new InvalidProductException(
                 __('Product with SKU %1 does not exist', $sku)
             );
         }
