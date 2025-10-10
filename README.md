@@ -237,10 +237,8 @@ bin/magento dev:tests:run integration RunAsRoot_AgenticCommerceProtocol
 
 ## 📚 Documentation
 
-- **[CERTIFICATION_COMPLETE.md](CERTIFICATION_COMPLETE.md)** - Certification readiness details
-- **[CERTIFICATION_ROADMAP.md](CERTIFICATION_ROADMAP.md)** - Spec compliance breakdown
-- **[TESTING_SUMMARY.md](TESTING_SUMMARY.md)** - Complete test coverage analysis
-- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Detailed setup instructions
+- **[STATUS.md](STATUS.md)** - Current project status and platform access blocker
+- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Detailed installation and configuration guide
 
 ---
 
@@ -355,7 +353,8 @@ MIT License - see [LICENSE](LICENSE) file
 1. Receive OpenAI merchant program approval
 2. Test with actual ChatGPT platform
 3. Complete OpenAI conformance tests
-4. Submit for certification
-5. Production deployment after approval
+4. Fix any issues discovered during platform testing
+5. Submit for final certification
+6. Production deployment after approval
 
-See [CERTIFICATION_COMPLETE.md](CERTIFICATION_COMPLETE.md) for full details.
+See [STATUS.md](STATUS.md) for detailed project status and timeline.
