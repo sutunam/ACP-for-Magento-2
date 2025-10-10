@@ -20,6 +20,7 @@ use RunAsRoot\AgenticCommerceProtocol\Api\Data\CheckoutSessionInterfaceFactory;
 use RunAsRoot\AgenticCommerceProtocol\Model\Address\AddressManagement;
 use RunAsRoot\AgenticCommerceProtocol\Model\Order\OrderManagement;
 use RunAsRoot\AgenticCommerceProtocol\Model\Quote\QuoteManagement;
+use RunAsRoot\AgenticCommerceProtocol\Model\Response\CheckoutSessionResponseBuilder;
 
 /**
  * ACP Checkout Session Management Implementation
@@ -33,7 +34,8 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
         private readonly QuoteManagement $quoteManagement,
         private readonly CartRepositoryInterface $cartRepository,
         private readonly OrderManagement $orderManagement,
-        private readonly AddressManagement $addressManagement
+        private readonly AddressManagement $addressManagement,
+        private readonly CheckoutSessionResponseBuilder $responseBuilder
     ) {
     }
 

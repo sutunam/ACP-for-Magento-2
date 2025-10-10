@@ -20,6 +20,13 @@
                 sortOrder="10"/>
     </type>
 
+    <!-- Checkout Session Response Plugin -->
+    <type name="RunAsRoot\AgenticCommerceProtocol\Api\CheckoutSessionManagementInterface">
+        <plugin name="acp_checkout_session_response"
+                type="RunAsRoot\AgenticCommerceProtocol\Plugin\CheckoutSessionResponsePlugin"
+                sortOrder="100"/>
+    </type>
+
     <!-- Custom Logger -->
     <type name="RunAsRoot\AgenticCommerceProtocol\Logger\Handler">
         <arguments>
