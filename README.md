@@ -235,11 +235,6 @@ bin/magento dev:tests:run integration RunAsRoot_AgenticCommerceProtocol
 
 ---
 
-## 📚 Documentation
-
-- **[STATUS.md](STATUS.md)** - Current project status and platform access blocker
-- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Detailed installation and configuration guide
-
 ---
 
 ## 🏗️ Architecture
@@ -349,12 +344,11 @@ MIT License - see [LICENSE](LICENSE) file
 - ❌ Real OpenAI API calls
 - ❌ OpenAI conformance test suite
 
-**Next Steps:**
-1. Receive OpenAI merchant program approval
-2. Test with actual ChatGPT platform
-3. Complete OpenAI conformance tests
-4. Fix any issues discovered during platform testing
-5. Submit for final certification
-6. Production deployment after approval
+**Timeline:**
+1. ⏳ Awaiting OpenAI merchant program approval
+2. Platform testing & conformance tests (est. 2-3 weeks)
+3. Bug fixes from platform testing (est. 1-2 weeks)
+4. Final certification submission
+5. Production deployment
 
-See [STATUS.md](STATUS.md) for detailed project status and timeline.
+**Application:** https://chatgpt.com/merchants
