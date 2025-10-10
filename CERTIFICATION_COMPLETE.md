@@ -1,12 +1,14 @@
-# 🎯 OpenAI ACP Certification - READY FOR SUBMISSION
+# 🎯 OpenAI ACP Certification - PRE-PRODUCTION STATUS
 
 ## Executive Summary
 
-This Magento 2 module has achieved **95% OpenAI ACP specification compliance** and is **ready for certification submission**.
+This Magento 2 module has achieved **95% OpenAI ACP specification compliance** and is **ready for platform testing**.
+
+⚠️ **IMPORTANT:** This module is spec-compliant but has **NOT been tested with actual OpenAI ChatGPT platform access**. Awaiting merchant program approval for live testing.
 
 **Progress:** 60% → 95% (in single development session)
-**Total Implementation:** 21 files created/modified
-**Quality:** Production-ready code with proper Magento patterns
+**Total Implementation:** 28 files created/modified
+**Quality:** Spec-compliant code with comprehensive tests, proper Magento patterns
 
 ---
 
@@ -145,9 +147,9 @@ This Magento 2 module has achieved **95% OpenAI ACP specification compliance** a
 
 ---
 
-## 🚀 Ready for Certification Submission
+## 🚧 Pre-Production Checklist
 
-### Pre-Submission Checklist
+### ✅ Code Implementation Complete
 
 ✅ **Core Functionality:**
 - [x] All 5 endpoints return spec-compliant responses
@@ -180,9 +182,15 @@ This Magento 2 module has achieved **95% OpenAI ACP specification compliance** a
 - [x] Error handling with custom exceptions
 - [x] Configuration in admin panel
 
-### Next Steps for Production
+### ⏳ Awaiting Platform Access
 
-1. **Pre-Submission Testing (Required):**
+**Current Blocker:** No access to OpenAI ChatGPT merchant platform for live testing.
+
+**Status:** Merchant application submitted to https://chatgpt.com/merchants - awaiting approval.
+
+### Next Steps After Platform Access
+
+1. **Live Platform Testing (REQUIRED - Pending Access):**
    - Test full checkout flow in sandbox/staging environment
    - Document all tests with request/response logs
    - Verify webhook delivery to OpenAI

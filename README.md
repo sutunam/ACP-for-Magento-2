@@ -1,8 +1,10 @@
 # Agentic Commerce Protocol for Magento 2
 
-**95% OpenAI ACP Spec Compliant | Production Ready | Fully Tested**
+**95% OpenAI ACP Spec Compliant | Pre-Production | Awaiting Platform Access**
 
 Enable ChatGPT purchases directly from your Magento 2 store using the **Agentic Commerce Protocol** (ACP) - an open standard by OpenAI and Stripe.
+
+> ⚠️ **Status:** This module is spec-compliant and fully tested with unit/integration tests, but has NOT been tested with actual OpenAI ChatGPT platform access. We are awaiting approval from OpenAI's merchant program. Use at your own risk until platform testing is complete.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Magento 2.4.6+](https://img.shields.io/badge/Magento-2.4.6%2B-orange.svg)](https://magento.com/)
@@ -327,16 +329,33 @@ MIT License - see [LICENSE](LICENSE) file
 
 ## 🎯 OpenAI Certification Status
 
-**Current Compliance:** 95% (Certification Ready)
+**Current Compliance:** 95% (Spec-Compliant, Awaiting Platform Testing)
 
 **Completed:**
-- ✅ All required response fields
+- ✅ All required response fields per ACP spec
 - ✅ Correct monetary value format (cents)
 - ✅ Proper status enums
 - ✅ Complete header validation
 - ✅ Product feed spec compliance
 - ✅ Security features (idempotency, replay protection)
+- ✅ 39 comprehensive tests (unit + integration)
 
-**Ready for submission to OpenAI for merchant certification.**
+**Status:**
+- ✅ Code complete and spec-compliant
+- ✅ Unit and integration tests passing
+- ⏳ **Awaiting OpenAI platform access for live testing**
+- ⏳ Merchant application submitted, pending approval
+
+**NOT YET TESTED WITH:**
+- ❌ Actual ChatGPT Instant Checkout interface
+- ❌ Real OpenAI API calls
+- ❌ OpenAI conformance test suite
+
+**Next Steps:**
+1. Receive OpenAI merchant program approval
+2. Test with actual ChatGPT platform
+3. Complete OpenAI conformance tests
+4. Submit for certification
+5. Production deployment after approval
 
 See [CERTIFICATION_COMPLETE.md](CERTIFICATION_COMPLETE.md) for full details.
