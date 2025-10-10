@@ -28,7 +28,10 @@ Enable ChatGPT purchases directly from your Magento 2 store using the **Agentic 
 - Configurable product variants with individual pricing
 - Multiple image support (full gallery)
 - Real-time inventory levels
-- `enable_search` and `enable_checkout` flags
+- Per-product control flags (`acp_enable_search`, `acp_enable_checkout`)
+- CLI feed generation (`bin/magento acp:feed:generate`)
+- Automated feed regeneration (cron every 6 hours)
+- Static file support for large catalogs (10k+ products)
 
 **Security Headers:**
 - `Idempotency-Key` validation (Redis-backed, 24hr cache)
@@ -209,6 +212,26 @@ GET /acp/feed
 ```
 
 Returns JSON feed with all visible products in ACP format.
+
+---
+
+## 🔧 CLI Commands
+
+### Generate Static Product Feed
+```bash
+bin/magento acp:feed:generate
+
+# Options:
+bin/magento acp:feed:generate --store=1 --output=custom_feed.json
+```
+
+Generates a static JSON feed file in `var/acp/feed.json` for improved performance with large catalogs.
+
+**Benefits:**
+- Pre-generate feeds for 10k+ product catalogs
+- Reduce real-time server load
+- Automated regeneration via cron (every 6 hours)
+- Custom output paths for multi-store setups
 
 ---
 
