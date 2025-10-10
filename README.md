@@ -55,40 +55,35 @@ cd dev/tests/integration
 ../../../vendor/bin/phpunit ../../../vendor/run-as-root/module-agentic-commerce-protocol/src/Test/Integration
 ```
 
-## Warden Local Development
+## Local Development
 
-To set up a local development environment with Warden:
+To set up a local development environment:
 
 ```bash
 # Clone this repository
 git clone https://github.com/run-as-root/ACP-for-Magento-2.git
 cd ACP-for-Magento-2
 
-# Initialize Warden environment
-warden env-init <project-name> magento2
-
-# Start Warden
-warden env up
-
-# Install Magento 2
-warden shell
+# Install Magento 2 (adjust paths as needed)
 composer create-project --repository-url=https://repo.magento.com/ magento/project-community-edition magento
 cd magento
+
+# Add module as local repository
 composer config repositories.local path "../src"
 composer require run-as-root/module-agentic-commerce-protocol:@dev
 
-# Setup Magento
+# Run Magento setup
 bin/magento setup:install \
-    --base-url=https://<project-name>.test/ \
-    --db-host=db \
+    --base-url=http://localhost/ \
+    --db-host=localhost \
     --db-name=magento \
-    --db-user=magento \
-    --db-password=magento \
+    --db-user=root \
+    --db-password=password \
     --admin-firstname=Admin \
     --admin-lastname=User \
     --admin-email=admin@example.com \
     --admin-user=admin \
-    --admin-password=Admin123 \
+    --admin-password=Admin123! \
     --language=en_US \
     --currency=USD \
     --timezone=America/Chicago
@@ -97,6 +92,7 @@ bin/magento setup:install \
 bin/magento module:enable RunAsRoot_AgenticCommerceProtocol
 bin/magento setup:upgrade
 bin/magento setup:di:compile
+bin/magento cache:flush
 ```
 
 ## Architecture

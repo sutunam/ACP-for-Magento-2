@@ -2,30 +2,18 @@
 
 ## Quick Start
 
-### 1. Set Up Local Environment with Warden
+### 1. Set Up Local Environment
 
-```bash
-# Make sure Warden is installed
-# https://docs.warden.dev/installing.html
-
-# Run the setup script
-./setup-warden.sh
-```
-
-This will:
-- Start Warden services
-- Install Magento 2.4.7
-- Install the ACP extension
-- Configure everything automatically
+Follow the installation instructions in the README.md to set up your Magento 2 instance with the ACP module installed.
 
 ### 2. Test API Endpoints Manually
 
-Access your Magento instance at `https://app.acp-magento2.test/`
+Access your Magento instance (adjust the URL based on your setup)
 
 #### Create a Checkout Session
 
 ```bash
-curl -X POST https://app.acp-magento2.test/rest/V1/acp/checkout_sessions \
+curl -X POST http://localhost/rest/V1/acp/checkout_sessions \
   -H "Content-Type: application/json" \
   -d '{
     "data": {
@@ -56,13 +44,13 @@ Response:
 #### Get Checkout Session
 
 ```bash
-curl https://app.acp-magento2.test/rest/V1/acp/checkout_sessions/cs_abc123...
+curl http://localhost/rest/V1/acp/checkout_sessions/cs_abc123...
 ```
 
 #### Update Checkout Session
 
 ```bash
-curl -X POST https://app.acp-magento2.test/rest/V1/acp/checkout_sessions/cs_abc123... \
+curl -X POST http://localhost/rest/V1/acp/checkout_sessions/cs_abc123... \
   -H "Content-Type: application/json" \
   -d '{
     "data": {
@@ -80,7 +68,7 @@ curl -X POST https://app.acp-magento2.test/rest/V1/acp/checkout_sessions/cs_abc1
 #### Complete Checkout Session
 
 ```bash
-curl -X POST https://app.acp-magento2.test/rest/V1/acp/checkout_sessions/cs_abc123.../complete \
+curl -X POST http://localhost/rest/V1/acp/checkout_sessions/cs_abc123.../complete \
   -H "Content-Type: application/json" \
   -d '{
     "data": {
@@ -94,22 +82,19 @@ curl -X POST https://app.acp-magento2.test/rest/V1/acp/checkout_sessions/cs_abc1
 #### Cancel Checkout Session
 
 ```bash
-curl -X POST https://app.acp-magento2.test/rest/V1/acp/checkout_sessions/cs_abc123.../cancel
+curl -X POST http://localhost/rest/V1/acp/checkout_sessions/cs_abc123.../cancel
 ```
 
 ### 3. Run Unit Tests
 
 ```bash
-warden shell
-cd magento
-vendor/bin/phpunit -c vendor/run-as-root/module-agentic-commerce-protocol/src/Test/Unit/phpunit.xml.dist
+cd vendor/run-as-root/module-agentic-commerce-protocol
+../../../vendor/bin/phpunit -c src/Test/Unit/phpunit.xml.dist
 ```
 
 ### 4. Run Integration Tests
 
 ```bash
-warden shell
-cd magento
 bin/magento dev:tests:run integration --filter RunAsRoot\\AgenticCommerceProtocol
 ```
 
@@ -119,7 +104,7 @@ Import this collection to test all endpoints:
 
 1. Create a new Postman Collection
 2. Add requests for each endpoint
-3. Use `{{base_url}}` = `https://app.acp-magento2.test`
+3. Use `{{base_url}}` = your Magento base URL (e.g., `http://localhost`)
 4. Set Content-Type header to `application/json`
 
 ## Debugging
@@ -127,16 +112,12 @@ Import this collection to test all endpoints:
 ### Check Module Status
 
 ```bash
-warden shell
-cd magento
 bin/magento module:status RunAsRoot_AgenticCommerceProtocol
 ```
 
 ### View Logs
 
 ```bash
-warden shell
-cd magento
 tail -f var/log/system.log
 tail -f var/log/exception.log
 ```
@@ -144,16 +125,12 @@ tail -f var/log/exception.log
 ### Clear Cache
 
 ```bash
-warden shell
-cd magento
 bin/magento cache:flush
 ```
 
 ### Recompile
 
 ```bash
-warden shell
-cd magento
 bin/magento setup:di:compile
 ```
 
