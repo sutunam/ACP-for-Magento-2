@@ -24,8 +24,14 @@ composer.lock
 /.warden/
 
 # Environment
+.env
 .env.local
 auth.json
+
+# Development scripts
+install-magento.sh
+setup-complete.sh
+*.sh
 
 # Tests
 .phpunit.result.cache
