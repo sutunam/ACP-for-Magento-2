@@ -60,10 +60,14 @@ class Session extends AbstractModel implements CheckoutSessionInterface
     public function getItems(): array
     {
         $items = $this->getData(self::ITEMS);
-        if (is_string($items)) {
-            return $this->serializer->unserialize($items);
+        if (is_string($items) && !empty($items)) {
+            try {
+                return $this->serializer->unserialize($items);
+            } catch (\Exception $e) {
+                return [];
+            }
         }
-        return (array)$items ?: [];
+        return is_array($items) ? $items : [];
     }
 
     public function setItems(array $items): CheckoutSessionInterface

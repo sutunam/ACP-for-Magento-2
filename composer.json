@@ -26,15 +26,15 @@
     },
     "autoload": {
         "files": [
-            "src/registration.php"
+            "registration.php"
         ],
         "psr-4": {
-            "RunAsRoot\\AgenticCommerceProtocol\\": "src/"
+            "RunAsRoot\\AgenticCommerceProtocol\\": ""
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "RunAsRoot\\AgenticCommerceProtocol\\Test\\": "src/Test/"
+            "RunAsRoot\\AgenticCommerceProtocol\\Test\\": "Test/"
         }
     },
     "minimum-stability": "stable",

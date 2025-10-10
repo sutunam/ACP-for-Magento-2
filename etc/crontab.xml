@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @author    Run_As_Root <hello@run-as-root.sh>
+ * @copyright 2025 Run_As_Root
+ * @license   https://opensource.org/license/mit  MIT License
+ * @link      https://run-as-root.sh/
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
+    <group id="default">
+        <job name="acp_cleanup_old_sessions" instance="RunAsRoot\AgenticCommerceProtocol\Cron\CleanupOldSessions" method="execute">
+            <schedule>0 2 * * *</schedule> <!-- Run daily at 2 AM -->
+        </job>
+    </group>
+</config>

@@ -137,14 +137,62 @@ class ProductFeedGenerator
             'description' => $this->cleanDescription($product->getDescription()),
             'short_description' => $this->cleanDescription($product->getShortDescription()),
             'price' => [
-                'amount' => (float)$product->getPrice(),
+                'amount' => $this->getProductPrice($product),
                 'currency' => $store->getCurrentCurrency()->getCode()
             ],
+            'product_type' => $product->getTypeId(),
             'url' => $product->getProductUrl(),
             'image_url' => $this->getProductImageUrl($product),
             'availability' => $product->isSalable() ? 'in_stock' : 'out_of_stock',
             'categories' => $this->getProductCategoryNames($product)
         ];
+    }
+
+    /**
+     * Get product price handling all product types
+     */
+    private function getProductPrice(ProductInterface $product): float
+    {
+        $price = 0.0;
+
+        switch ($product->getTypeId()) {
+            case 'simple':
+            case 'virtual':
+            case 'downloadable':
+                // Simple products have direct price
+                $price = (float)$product->getFinalPrice();
+                break;
+
+            case 'configurable':
+                // Get minimum price from child products
+                $price = (float)$product->getPriceInfo()
+                    ->getPrice('final_price')
+                    ->getMinimalPrice()
+                    ->getValue();
+                break;
+
+            case 'bundle':
+                // Get minimum bundle price
+                $price = (float)$product->getPriceInfo()
+                    ->getPrice('final_price')
+                    ->getMinimalPrice()
+                    ->getValue();
+                break;
+
+            case 'grouped':
+                // Get minimum price from associated products
+                $price = (float)$product->getPriceInfo()
+                    ->getPrice('final_price')
+                    ->getMinimalPrice()
+                    ->getValue();
+                break;
+
+            default:
+                // Fallback to regular price
+                $price = (float)$product->getFinalPrice();
+        }
+
+        return max($price, 0.0); // Ensure non-negative
     }
 
     /**
