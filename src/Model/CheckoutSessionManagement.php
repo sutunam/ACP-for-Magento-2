@@ -17,6 +17,7 @@ use Magento\Store\Model\StoreManagerInterface;
 use RunAsRoot\AgenticCommerceProtocol\Api\CheckoutSessionManagementInterface;
 use RunAsRoot\AgenticCommerceProtocol\Api\Data\CheckoutSessionInterface;
 use RunAsRoot\AgenticCommerceProtocol\Api\Data\CheckoutSessionInterfaceFactory;
+use RunAsRoot\AgenticCommerceProtocol\Model\Address\AddressManagement;
 use RunAsRoot\AgenticCommerceProtocol\Model\Order\OrderManagement;
 use RunAsRoot\AgenticCommerceProtocol\Model\Quote\QuoteManagement;
 
@@ -31,7 +32,8 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
         private readonly CheckoutSessionRepository $sessionRepository,
         private readonly QuoteManagement $quoteManagement,
         private readonly CartRepositoryInterface $cartRepository,
-        private readonly OrderManagement $orderManagement
+        private readonly OrderManagement $orderManagement,
+        private readonly AddressManagement $addressManagement
     ) {
     }
 
@@ -67,24 +69,51 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
 
         $requestData = is_string($data) ? json_decode($data, true) : $data;
 
+        $quoteId = $session->getData('quote_id');
+        $quote = $quoteId ? $this->cartRepository->get($quoteId) : null;
+
+        $needsSave = false;
+
+        // Update items if provided
         if (isset($requestData['items'])) {
             $session->setItems($requestData['items']);
 
-            // Update Magento quote
-            $quoteId = $session->getData('quote_id');
-            if ($quoteId) {
-                $quote = $this->cartRepository->get($quoteId);
+            if ($quote) {
                 $quote = $this->quoteManagement->updateQuoteItems($quote, $requestData['items']);
-                $session->setTotal($this->quoteManagement->getQuoteTotal($quote));
             } else {
-                // If no quote exists, create one
                 $quote = $this->quoteManagement->createFromItems($requestData['items']);
                 $session->setData('quote_id', $quote->getId());
-                $session->setTotal($this->quoteManagement->getQuoteTotal($quote));
             }
+            $needsSave = true;
         }
 
-        $this->sessionRepository->save($session);
+        // Update shipping address if provided
+        if (isset($requestData['fulfillment_address']) && $quote) {
+            $this->addressManagement->setShippingAddress($quote, $requestData['fulfillment_address']);
+            $quote->collectTotals();
+            $this->cartRepository->save($quote);
+            $session->setData('fulfillment_address', json_encode($requestData['fulfillment_address']));
+            $needsSave = true;
+        }
+
+        // Update buyer info if provided
+        if (isset($requestData['buyer']) && $quote) {
+            $quote->setCustomerEmail($requestData['buyer']['email'] ?? null);
+            $quote->setCustomerFirstname($requestData['buyer']['first_name'] ?? 'Guest');
+            $quote->setCustomerLastname($requestData['buyer']['last_name'] ?? 'Customer');
+            $this->cartRepository->save($quote);
+            $session->setData('buyer_info', json_encode($requestData['buyer']));
+            $needsSave = true;
+        }
+
+        // Recalculate total if quote was modified
+        if ($quote && $needsSave) {
+            $session->setTotal($this->quoteManagement->getQuoteTotal($quote));
+        }
+
+        if ($needsSave) {
+            $this->sessionRepository->save($session);
+        }
 
         return $session;
     }

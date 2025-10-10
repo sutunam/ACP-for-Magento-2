@@ -16,7 +16,8 @@
         "magento/module-checkout": "^100.4",
         "magento/module-quote": "^101.2",
         "magento/module-sales": "^103.0",
-        "magento/module-store": "^101.1"
+        "magento/module-store": "^101.1",
+        "stripe/stripe-php": "^13.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.5",
