@@ -8,8 +8,15 @@
  */
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
-    <preference for="RunAsRoot\AgenticCommerceProtocol\Api\CheckoutSessionManagementInterface" 
+    <preference for="RunAsRoot\AgenticCommerceProtocol\Api\CheckoutSessionManagementInterface"
                 type="RunAsRoot\AgenticCommerceProtocol\Model\CheckoutSessionManagement"/>
-    <preference for="RunAsRoot\AgenticCommerceProtocol\Api\Data\CheckoutSessionInterface" 
+    <preference for="RunAsRoot\AgenticCommerceProtocol\Api\Data\CheckoutSessionInterface"
                 type="RunAsRoot\AgenticCommerceProtocol\Model\Checkout\Session"/>
+
+    <!-- API Authentication Plugin -->
+    <type name="Magento\Webapi\Controller\Rest">
+        <plugin name="acp_api_authentication"
+                type="RunAsRoot\AgenticCommerceProtocol\Plugin\ApiAuthenticationPlugin"
+                sortOrder="10"/>
+    </type>
 </config>
