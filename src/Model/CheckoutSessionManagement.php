@@ -12,10 +12,12 @@ namespace RunAsRoot\AgenticCommerceProtocol\Model;
 
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Exception\NoSuchEntityException;
+use Magento\Quote\Api\CartRepositoryInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use RunAsRoot\AgenticCommerceProtocol\Api\CheckoutSessionManagementInterface;
 use RunAsRoot\AgenticCommerceProtocol\Api\Data\CheckoutSessionInterface;
 use RunAsRoot\AgenticCommerceProtocol\Api\Data\CheckoutSessionInterfaceFactory;
+use RunAsRoot\AgenticCommerceProtocol\Model\Quote\QuoteManagement;
 
 /**
  * ACP Checkout Session Management Implementation
@@ -25,7 +27,9 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
     public function __construct(
         private readonly CheckoutSessionInterfaceFactory $checkoutSessionFactory,
         private readonly StoreManagerInterface $storeManager,
-        private readonly CheckoutSessionRepository $sessionRepository
+        private readonly CheckoutSessionRepository $sessionRepository,
+        private readonly QuoteManagement $quoteManagement,
+        private readonly CartRepositoryInterface $cartRepository
     ) {
     }
 
@@ -39,12 +43,16 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
 
         $checkoutSessionId = $this->generateSessionId();
 
+        // Create Magento quote from items
+        $quote = $this->quoteManagement->createFromItems($requestData['items']);
+
         $session = $this->checkoutSessionFactory->create();
         $session->setCheckoutSessionId($checkoutSessionId);
         $session->setStatus('open');
         $session->setItems($requestData['items']);
-        $session->setCurrency($this->storeManager->getStore()->getCurrentCurrency()->getCode());
-        $session->setTotal($this->calculateTotal($requestData['items']));
+        $session->setCurrency($quote->getQuoteCurrencyCode());
+        $session->setTotal($this->quoteManagement->getQuoteTotal($quote));
+        $session->setData('quote_id', $quote->getId());
 
         $this->sessionRepository->save($session);
 
@@ -59,7 +67,19 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
 
         if (isset($requestData['items'])) {
             $session->setItems($requestData['items']);
-            $session->setTotal($this->calculateTotal($requestData['items']));
+
+            // Update Magento quote
+            $quoteId = $session->getData('quote_id');
+            if ($quoteId) {
+                $quote = $this->cartRepository->get($quoteId);
+                $quote = $this->quoteManagement->updateQuoteItems($quote, $requestData['items']);
+                $session->setTotal($this->quoteManagement->getQuoteTotal($quote));
+            } else {
+                // If no quote exists, create one
+                $quote = $this->quoteManagement->createFromItems($requestData['items']);
+                $session->setData('quote_id', $quote->getId());
+                $session->setTotal($this->quoteManagement->getQuoteTotal($quote));
+            }
         }
 
         $this->sessionRepository->save($session);
@@ -107,16 +127,5 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
     private function generateSessionId(): string
     {
         return 'cs_' . bin2hex(random_bytes(16));
-    }
-
-    private function calculateTotal(array $items): float
-    {
-        $total = 0.0;
-        foreach ($items as $item) {
-            $quantity = $item['quantity'] ?? 1;
-            $price = $item['price'] ?? 0.0;
-            $total += $quantity * $price;
-        }
-        return $total;
     }
 }
