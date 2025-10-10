@@ -13,7 +13,9 @@ namespace RunAsRoot\AgenticCommerceProtocol\Model\Feed;
 use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Catalog\Api\ProductRepositoryInterface;
 use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory;
+use Magento\Framework\App\CacheInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Framework\Serialize\SerializerInterface;
 use Magento\Framework\UrlInterface;
 use Magento\Store\Model\StoreManagerInterface;
 
@@ -24,20 +26,33 @@ class ProductFeedGenerator
 {
     private const CONFIG_PATH_MAX_PRODUCTS = 'acp/product_feed/max_products';
     private const CONFIG_PATH_CATEGORIES = 'acp/product_feed/categories';
+    private const CACHE_TAG = 'acp_product_feed';
+    private const CACHE_LIFETIME = 3600; // 1 hour
 
     public function __construct(
         private readonly CollectionFactory $productCollectionFactory,
         private readonly ScopeConfigInterface $scopeConfig,
         private readonly StoreManagerInterface $storeManager,
-        private readonly ProductRepositoryInterface $productRepository
+        private readonly ProductRepositoryInterface $productRepository,
+        private readonly CacheInterface $cache,
+        private readonly SerializerInterface $serializer
     ) {
     }
 
     /**
-     * Generate product feed as JSON
+     * Generate product feed as JSON (with caching)
      */
     public function generate(): array
     {
+        $cacheKey = $this->getCacheKey();
+
+        // Try to load from cache
+        $cachedFeed = $this->cache->load($cacheKey);
+        if ($cachedFeed) {
+            return $this->serializer->unserialize($cachedFeed);
+        }
+
+        // Generate fresh feed
         $products = $this->getProducts();
         $feed = [];
 
@@ -45,12 +60,32 @@ class ProductFeedGenerator
             $feed[] = $this->formatProduct($product);
         }
 
-        return [
+        $result = [
             'products' => $feed,
             'total_count' => count($feed),
             'generated_at' => date('c'),
-            'store' => $this->storeManager->getStore()->getName()
+            'store' => $this->storeManager->getStore()->getName(),
+            'supported_currencies' => $this->storeManager->getStore()->getAvailableCurrencyCodes(true)
         ];
+
+        // Save to cache
+        $this->cache->save(
+            $this->serializer->serialize($result),
+            $cacheKey,
+            [self::CACHE_TAG],
+            self::CACHE_LIFETIME
+        );
+
+        return $result;
+    }
+
+    /**
+     * Get cache key for product feed
+     */
+    private function getCacheKey(): string
+    {
+        $storeId = $this->storeManager->getStore()->getId();
+        return self::CACHE_TAG . '_store_' . $storeId;
     }
 
     /**

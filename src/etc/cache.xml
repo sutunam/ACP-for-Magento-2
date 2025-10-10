@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @author    Run_As_Root <hello@run-as-root.sh>
+ * @copyright 2025 Run_As_Root
+ * @license   https://opensource.org/license/mit  MIT License
+ * @link      https://run-as-root.sh/
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Cache/etc/cache.xsd">
+    <type name="acp_product_feed" translate="label,description" instance="RunAsRoot\AgenticCommerceProtocol\Model\Cache\Type\ProductFeed">
+        <label>ACP Product Feed</label>
+        <description>Product feed cache for Agentic Commerce Protocol</description>
+    </type>
+</config>
