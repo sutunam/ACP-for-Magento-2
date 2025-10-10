@@ -21,6 +21,10 @@
             <webhooks>
                 <enabled>0</enabled>
             </webhooks>
+            <stripe>
+                <active>0</active>
+                <test_mode>1</test_mode>
+            </stripe>
         </acp>
     </default>
 </config>

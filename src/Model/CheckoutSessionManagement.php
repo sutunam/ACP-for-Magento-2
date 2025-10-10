@@ -17,6 +17,7 @@ use Magento\Store\Model\StoreManagerInterface;
 use RunAsRoot\AgenticCommerceProtocol\Api\CheckoutSessionManagementInterface;
 use RunAsRoot\AgenticCommerceProtocol\Api\Data\CheckoutSessionInterface;
 use RunAsRoot\AgenticCommerceProtocol\Api\Data\CheckoutSessionInterfaceFactory;
+use RunAsRoot\AgenticCommerceProtocol\Model\Order\OrderManagement;
 use RunAsRoot\AgenticCommerceProtocol\Model\Quote\QuoteManagement;
 
 /**
@@ -29,7 +30,8 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
         private readonly StoreManagerInterface $storeManager,
         private readonly CheckoutSessionRepository $sessionRepository,
         private readonly QuoteManagement $quoteManagement,
-        private readonly CartRepositoryInterface $cartRepository
+        private readonly CartRepositoryInterface $cartRepository,
+        private readonly OrderManagement $orderManagement
     ) {
     }
 
@@ -100,8 +102,29 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
             throw new LocalizedException(__('Cannot complete a checkout session that is not open'));
         }
 
+        $requestData = is_string($data) ? json_decode($data, true) : $data;
+        $paymentData = $requestData['payment_data'] ?? [];
+
+        if (empty($paymentData)) {
+            throw new LocalizedException(__('Payment data is required to complete checkout'));
+        }
+
+        // Get quote
+        $quoteId = $session->getData('quote_id');
+        if (!$quoteId) {
+            throw new LocalizedException(__('Quote not found for checkout session'));
+        }
+
+        $quote = $this->cartRepository->get($quoteId);
+
+        // Create order with payment processing
+        $order = $this->orderManagement->createOrder($quote, $paymentData, $checkoutSessionId);
+
+        // Update session
         $session->setStatus('completed');
         $session->setData('completed_at', date('Y-m-d H:i:s'));
+        $session->setData('order_id', $order->getEntityId());
+        $session->setData('payment_data', json_encode($paymentData));
 
         $this->sessionRepository->save($session);
 
