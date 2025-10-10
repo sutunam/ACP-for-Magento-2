@@ -96,6 +96,13 @@ class QuoteManagement
             // Load product by SKU
             $product = $this->productRepository->get($sku);
 
+            // Validate product allows ACP checkout
+            if ($product->getData('acp_enable_checkout') === '0') {
+                throw new LocalizedException(
+                    __('Product "%1" is not available for instant checkout', $product->getName())
+                );
+            }
+
             // Validate product is salable
             if (!$product->isSalable()) {
                 throw new OutOfStockException(

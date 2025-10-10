@@ -12,5 +12,8 @@
         <job name="acp_cleanup_old_sessions" instance="RunAsRoot\AgenticCommerceProtocol\Cron\CleanupOldSessions" method="execute">
             <schedule>0 2 * * *</schedule> <!-- Run daily at 2 AM -->
         </job>
+        <job name="acp_generate_static_feed" instance="RunAsRoot\AgenticCommerceProtocol\Cron\GenerateFeed" method="execute">
+            <schedule>0 */6 * * *</schedule> <!-- Run every 6 hours -->
+        </job>
     </group>
 </config>

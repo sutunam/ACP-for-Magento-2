@@ -41,4 +41,13 @@
             </argument>
         </arguments>
     </type>
+
+    <!-- Console Commands -->
+    <type name="Magento\Framework\Console\CommandListInterface">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="acpGenerateFeed" xsi:type="object">RunAsRoot\AgenticCommerceProtocol\Console\Command\GenerateFeedCommand</item>
+            </argument>
+        </arguments>
+    </type>
 </config>

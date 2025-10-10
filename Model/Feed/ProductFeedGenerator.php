@@ -64,6 +64,11 @@ class ProductFeedGenerator
         $feed = [];
 
         foreach ($products as $product) {
+            // Skip products with acp_enable_search disabled
+            if ($product->getData('acp_enable_search') === '0') {
+                continue;
+            }
+
             $feed[] = $this->formatProduct($product);
         }
 
@@ -112,9 +117,11 @@ class ProductFeedGenerator
             'image',
             'status',
             'visibility',
-            'manufacturer', // Brand per ACP spec
-            'gtin',        // Global Trade Item Number
-            'mpn'          // Manufacturer Part Number
+            'manufacturer',        // Brand per ACP spec
+            'gtin',                // Global Trade Item Number
+            'mpn',                 // Manufacturer Part Number
+            'acp_enable_search',   // Per-product search control
+            'acp_enable_checkout'  // Per-product checkout control
         ]);
 
         // Only visible, enabled, in-stock products
@@ -161,9 +168,9 @@ class ProductFeedGenerator
             'brand' => $this->getBrand($product),
             'categories' => $this->getProductCategoryNames($product),
 
-            // ACP spec flags
-            'enable_search' => true,
-            'enable_checkout' => $product->isSalable(),
+            // ACP spec flags (use product attributes, fallback to defaults)
+            'enable_search' => $product->getData('acp_enable_search') !== '0',
+            'enable_checkout' => $product->getData('acp_enable_checkout') !== '0' && $product->isSalable(),
 
             // Inventory
             'inventory_quantity' => $this->getInventoryQuantity($product),
