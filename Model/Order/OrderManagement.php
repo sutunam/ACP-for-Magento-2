@@ -10,10 +10,12 @@ declare(strict_types=1);
 
 namespace RunAsRoot\AgenticCommerceProtocol\Model\Order;
 
+use Magento\Framework\UrlInterface;
 use Magento\Quote\Api\CartManagementInterface;
 use Magento\Quote\Model\Quote;
 use Magento\Sales\Api\Data\OrderInterface;
 use Magento\Sales\Api\OrderRepositoryInterface;
+use Magento\Store\Model\StoreManagerInterface;
 use RunAsRoot\AgenticCommerceProtocol\Exception\PaymentDeclinedException;
 use RunAsRoot\AgenticCommerceProtocol\Model\Payment\DelegatedPaymentProcessor;
 
@@ -25,7 +27,8 @@ class OrderManagement
     public function __construct(
         private readonly CartManagementInterface $cartManagement,
         private readonly OrderRepositoryInterface $orderRepository,
-        private readonly DelegatedPaymentProcessor $paymentProcessor
+        private readonly DelegatedPaymentProcessor $paymentProcessor,
+        private readonly StoreManagerInterface $storeManager
     ) {
     }
 
@@ -60,8 +63,38 @@ class OrderManagement
 
         // Store ACP session ID on order for webhook tracking
         $order->setData('acp_checkout_session_id', $checkoutSessionId);
+
+        // Track if confirmation email was sent
+        $emailSent = (bool)$order->getEmailSent();
+        $order->setData('acp_confirmation_email_sent', $emailSent);
+
         $this->orderRepository->save($order);
 
         return $order;
+    }
+
+    /**
+     * Get order view URL for customer
+     *
+     * @param OrderInterface $order
+     * @return string
+     */
+    public function getOrderUrl(OrderInterface $order): string
+    {
+        $store = $this->storeManager->getStore();
+        $baseUrl = $store->getBaseUrl(UrlInterface::URL_TYPE_WEB);
+
+        return $baseUrl . 'sales/order/view/order_id/' . $order->getEntityId();
+    }
+
+    /**
+     * Check if confirmation email was sent
+     *
+     * @param OrderInterface $order
+     * @return bool
+     */
+    public function wasConfirmationEmailSent(OrderInterface $order): bool
+    {
+        return (bool)$order->getData('acp_confirmation_email_sent');
     }
 }

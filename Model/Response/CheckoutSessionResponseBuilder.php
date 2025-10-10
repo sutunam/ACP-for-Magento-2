@@ -81,9 +81,24 @@ class CheckoutSessionResponseBuilder
         // Add order details if completed
         if ($session->getStatus() === 'completed') {
             $orderId = $session->getData('order_id');
+            $orderIncrementId = $session->getData('order_increment_id');
+            $orderUrl = $session->getData('order_url');
+            $confirmationEmailSent = $session->getData('confirmation_email_sent');
+
             if ($orderId) {
                 $response['order_id'] = (string)$orderId;
-                $response['order_number'] = (string)$orderId;
+            }
+
+            if ($orderIncrementId) {
+                $response['order_number'] = (string)$orderIncrementId;
+            }
+
+            if ($orderUrl) {
+                $response['order_url'] = $orderUrl;
+            }
+
+            if ($confirmationEmailSent !== null) {
+                $response['confirmation_email_sent'] = (bool)$confirmationEmailSent;
             }
         }
 

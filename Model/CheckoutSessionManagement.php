@@ -175,10 +175,13 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
         // Create order with payment processing
         $order = $this->orderManagement->createOrder($quote, $paymentData, $checkoutSessionId);
 
-        // Update session
+        // Update session with order details
         $session->setStatus('completed');
         $session->setData('completed_at', date('Y-m-d H:i:s'));
         $session->setData('order_id', $order->getEntityId());
+        $session->setData('order_increment_id', $order->getIncrementId());
+        $session->setData('order_url', $this->orderManagement->getOrderUrl($order));
+        $session->setData('confirmation_email_sent', $this->orderManagement->wasConfirmationEmailSent($order));
         $session->setData('payment_data', json_encode($paymentData));
 
         $this->sessionRepository->save($session);

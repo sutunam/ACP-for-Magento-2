@@ -27,11 +27,9 @@ class LineItemBuilder
     public function build(Quote $quote): array
     {
         $lineItems = [];
-        $itemIndex = 1;
 
         foreach ($quote->getAllVisibleItems() as $item) {
-            $lineItems[] = $this->buildLineItem($item, $itemIndex, $quote->getQuoteCurrencyCode());
-            $itemIndex++;
+            $lineItems[] = $this->buildLineItem($item, $quote->getQuoteCurrencyCode());
         }
 
         return $lineItems;
@@ -41,11 +39,10 @@ class LineItemBuilder
      * Build single line item from quote item
      *
      * @param QuoteItem $item
-     * @param int $index
      * @param string $currencyCode
      * @return array
      */
-    private function buildLineItem(QuoteItem $item, int $index, string $currencyCode): array
+    private function buildLineItem(QuoteItem $item, string $currencyCode): array
     {
         $qty = (int)$item->getQty();
 
@@ -56,7 +53,7 @@ class LineItemBuilder
         $totalAmount = $item->getRowTotalInclTax();
 
         return [
-            'item_id' => 'item_' . $index,
+            'item_id' => $this->generateStableItemId($item),
             'product_title' => $item->getName(),
             'sku' => $item->getSku(),
             'quantity' => $qty,
@@ -77,6 +74,24 @@ class LineItemBuilder
                 'currency' => $currencyCode
             ]
         ];
+    }
+
+    /**
+     * Generate stable item ID based on quote item ID and SKU
+     * Ensures consistent IDs across requests
+     *
+     * @param QuoteItem $item
+     * @return string
+     */
+    private function generateStableItemId(QuoteItem $item): string
+    {
+        // Use quote item ID if available (persisted), otherwise use SKU hash
+        if ($item->getId()) {
+            return 'item_' . $item->getId();
+        }
+
+        // Fallback: hash of SKU for stability
+        return 'item_' . substr(md5($item->getSku()), 0, 8);
     }
 
     /**
