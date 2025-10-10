@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @author    Run_As_Root <hello@run-as-root.sh>
+ * @copyright 2025 Run_As_Root
+ * @license   https://opensource.org/license/mit  MIT License
+ * @link      https://run-as-root.sh/
+ */
+-->
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    
+    <table name="acp_checkout_session" resource="default" engine="innodb" comment="ACP Checkout Sessions">
+        <column xsi:type="int" name="entity_id" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
+        <column xsi:type="varchar" name="checkout_session_id" nullable="false" length="64" comment="ACP Checkout Session ID"/>
+        <column xsi:type="varchar" name="status" nullable="false" length="32" default="open" comment="Session Status"/>
+        <column xsi:type="int" name="quote_id" unsigned="true" nullable="true" comment="Magento Quote ID"/>
+        <column xsi:type="int" name="order_id" unsigned="true" nullable="true" comment="Magento Order ID"/>
+        <column xsi:type="text" name="items" nullable="false" comment="Session Items JSON"/>
+        <column xsi:type="text" name="fulfillment_address" nullable="true" comment="Fulfillment Address JSON"/>
+        <column xsi:type="text" name="buyer_info" nullable="true" comment="Buyer Information JSON"/>
+        <column xsi:type="text" name="payment_data" nullable="true" comment="Payment Data JSON"/>
+        <column xsi:type="decimal" name="total" scale="4" precision="20" unsigned="false" nullable="false" default="0" comment="Total Amount"/>
+        <column xsi:type="varchar" name="currency" nullable="false" length="3" comment="Currency Code"/>
+        <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+        <column xsi:type="timestamp" name="updated_at" on_update="true" nullable="false" default="CURRENT_TIMESTAMP" comment="Updated At"/>
+        <column xsi:type="timestamp" name="completed_at" on_update="false" nullable="true" comment="Completed At"/>
+        <column xsi:type="timestamp" name="canceled_at" on_update="false" nullable="true" comment="Canceled At"/>
+        
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="ACP_CHECKOUT_SESSION_CHECKOUT_SESSION_ID">
+            <column name="checkout_session_id"/>
+        </constraint>
+        <constraint xsi:type="foreign" referenceId="ACP_CHECKOUT_SESSION_QUOTE_ID_QUOTE_ENTITY_ID" 
+                    table="acp_checkout_session" column="quote_id" referenceTable="quote" 
+                    referenceColumn="entity_id" onDelete="SET NULL"/>
+        <constraint xsi:type="foreign" referenceId="ACP_CHECKOUT_SESSION_ORDER_ID_SALES_ORDER_ENTITY_ID" 
+                    table="acp_checkout_session" column="order_id" referenceTable="sales_order" 
+                    referenceColumn="entity_id" onDelete="SET NULL"/>
+        
+        <index referenceId="ACP_CHECKOUT_SESSION_STATUS" indexType="btree">
+            <column name="status"/>
+        </index>
+        <index referenceId="ACP_CHECKOUT_SESSION_QUOTE_ID" indexType="btree">
+            <column name="quote_id"/>
+        </index>
+        <index referenceId="ACP_CHECKOUT_SESSION_ORDER_ID" indexType="btree">
+            <column name="order_id"/>
+        </index>
+        <index referenceId="ACP_CHECKOUT_SESSION_CREATED_AT" indexType="btree">
+            <column name="created_at"/>
+        </index>
+    </table>
+</schema>

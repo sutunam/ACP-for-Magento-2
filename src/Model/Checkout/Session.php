@@ -10,14 +10,33 @@ declare(strict_types=1);
 
 namespace RunAsRoot\AgenticCommerceProtocol\Model\Checkout;
 
-use Magento\Framework\DataObject;
+use Magento\Framework\Model\AbstractModel;
+use Magento\Framework\Serialize\SerializerInterface;
 use RunAsRoot\AgenticCommerceProtocol\Api\Data\CheckoutSessionInterface;
 
 /**
  * ACP Checkout Session Model
  */
-class Session extends DataObject implements CheckoutSessionInterface
+class Session extends AbstractModel implements CheckoutSessionInterface
 {
+    private SerializerInterface $serializer;
+
+    public function __construct(
+        \Magento\Framework\Model\Context $context,
+        \Magento\Framework\Registry $registry,
+        SerializerInterface $serializer,
+        \Magento\Framework\Model\ResourceModel\AbstractResource $resource = null,
+        \Magento\Framework\Data\Collection\AbstractDb $resourceCollection = null,
+        array $data = []
+    ) {
+        $this->serializer = $serializer;
+        parent::__construct($context, $registry, $resource, $resourceCollection, $data);
+    }
+
+    protected function _construct(): void
+    {
+        $this->_init(\RunAsRoot\AgenticCommerceProtocol\Model\ResourceModel\CheckoutSession::class);
+    }
     public function getCheckoutSessionId(): string
     {
         return (string)$this->getData(self::CHECKOUT_SESSION_ID);
@@ -40,12 +59,16 @@ class Session extends DataObject implements CheckoutSessionInterface
 
     public function getItems(): array
     {
-        return (array)$this->getData(self::ITEMS) ?: [];
+        $items = $this->getData(self::ITEMS);
+        if (is_string($items)) {
+            return $this->serializer->unserialize($items);
+        }
+        return (array)$items ?: [];
     }
 
     public function setItems(array $items): CheckoutSessionInterface
     {
-        return $this->setData(self::ITEMS, $items);
+        return $this->setData(self::ITEMS, $this->serializer->serialize($items));
     }
 
     public function getTotal(): float

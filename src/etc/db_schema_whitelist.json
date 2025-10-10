@@ -1,0 +1,33 @@
+{
+    "acp_checkout_session": {
+        "column": {
+            "entity_id": true,
+            "checkout_session_id": true,
+            "status": true,
+            "quote_id": true,
+            "order_id": true,
+            "items": true,
+            "fulfillment_address": true,
+            "buyer_info": true,
+            "payment_data": true,
+            "total": true,
+            "currency": true,
+            "created_at": true,
+            "updated_at": true,
+            "completed_at": true,
+            "canceled_at": true
+        },
+        "index": {
+            "ACP_CHECKOUT_SESSION_STATUS": true,
+            "ACP_CHECKOUT_SESSION_QUOTE_ID": true,
+            "ACP_CHECKOUT_SESSION_ORDER_ID": true,
+            "ACP_CHECKOUT_SESSION_CREATED_AT": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "ACP_CHECKOUT_SESSION_CHECKOUT_SESSION_ID": true,
+            "ACP_CHECKOUT_SESSION_QUOTE_ID_QUOTE_ENTITY_ID": true,
+            "ACP_CHECKOUT_SESSION_ORDER_ID_SALES_ORDER_ENTITY_ID": true
+        }
+    }
+}

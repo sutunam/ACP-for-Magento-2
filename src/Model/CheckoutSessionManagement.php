@@ -22,34 +22,31 @@ use RunAsRoot\AgenticCommerceProtocol\Api\Data\CheckoutSessionInterfaceFactory;
  */
 class CheckoutSessionManagement implements CheckoutSessionManagementInterface
 {
-    private array $sessions = [];
-
     public function __construct(
         private readonly CheckoutSessionInterfaceFactory $checkoutSessionFactory,
-        private readonly StoreManagerInterface $storeManager
+        private readonly StoreManagerInterface $storeManager,
+        private readonly CheckoutSessionRepository $sessionRepository
     ) {
     }
 
     public function create($data): CheckoutSessionInterface
     {
         $requestData = is_string($data) ? json_decode($data, true) : $data;
-        
+
         if (!isset($requestData['items']) || empty($requestData['items'])) {
             throw new LocalizedException(__('Items are required to create a checkout session'));
         }
 
         $checkoutSessionId = $this->generateSessionId();
-        
+
         $session = $this->checkoutSessionFactory->create();
         $session->setCheckoutSessionId($checkoutSessionId);
         $session->setStatus('open');
         $session->setItems($requestData['items']);
         $session->setCurrency($this->storeManager->getStore()->getCurrentCurrency()->getCode());
         $session->setTotal($this->calculateTotal($requestData['items']));
-        $session->setData('created_at', date('c'));
-        $session->setData('updated_at', date('c'));
 
-        $this->sessions[$checkoutSessionId] = $session;
+        $this->sessionRepository->save($session);
 
         return $session;
     }
@@ -57,7 +54,7 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
     public function update(string $checkoutSessionId, $data): CheckoutSessionInterface
     {
         $session = $this->get($checkoutSessionId);
-        
+
         $requestData = is_string($data) ? json_decode($data, true) : $data;
 
         if (isset($requestData['items'])) {
@@ -65,19 +62,14 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
             $session->setTotal($this->calculateTotal($requestData['items']));
         }
 
-        $session->setData('updated_at', date('c'));
-        $this->sessions[$checkoutSessionId] = $session;
+        $this->sessionRepository->save($session);
 
         return $session;
     }
 
     public function get(string $checkoutSessionId): CheckoutSessionInterface
     {
-        if (!isset($this->sessions[$checkoutSessionId])) {
-            throw new NoSuchEntityException(__('Checkout session with ID "%1" does not exist', $checkoutSessionId));
-        }
-
-        return $this->sessions[$checkoutSessionId];
+        return $this->sessionRepository->getByCheckoutSessionId($checkoutSessionId);
     }
 
     public function complete(string $checkoutSessionId, $data): CheckoutSessionInterface
@@ -89,10 +81,9 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
         }
 
         $session->setStatus('completed');
-        $session->setData('updated_at', date('c'));
-        $session->setData('completed_at', date('c'));
+        $session->setData('completed_at', date('Y-m-d H:i:s'));
 
-        $this->sessions[$checkoutSessionId] = $session;
+        $this->sessionRepository->save($session);
 
         return $session;
     }
@@ -106,10 +97,9 @@ class CheckoutSessionManagement implements CheckoutSessionManagementInterface
         }
 
         $session->setStatus('canceled');
-        $session->setData('updated_at', date('c'));
-        $session->setData('canceled_at', date('c'));
+        $session->setData('canceled_at', date('Y-m-d H:i:s'));
 
-        $this->sessions[$checkoutSessionId] = $session;
+        $this->sessionRepository->save($session);
 
         return $session;
     }
