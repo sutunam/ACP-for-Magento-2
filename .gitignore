@@ -1,0 +1,32 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Magento
+magento/
+vendor/
+var/
+pub/static/
+pub/media/
+generated/
+
+# Composer
+composer.lock
+
+# Warden
+/.warden/
+
+# Environment
+.env.local
+auth.json
+
+# Tests
+.phpunit.result.cache
+coverage/
