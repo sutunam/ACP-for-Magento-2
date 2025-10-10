@@ -182,23 +182,45 @@ This Magento 2 module has achieved **95% OpenAI ACP specification compliance** a
 
 ### Next Steps for Production
 
-1. **Testing:**
-   - Test full checkout flow in staging
-   - Verify webhook delivery
+1. **Pre-Submission Testing (Required):**
+   - Test full checkout flow in sandbox/staging environment
+   - Document all tests with request/response logs
+   - Verify webhook delivery to OpenAI
    - Test with real Stripe keys
-   - Load test API performance
+   - Complete ALL conformance tests:
+     - Session creation and address handling
+     - Shipping option updates
+     - Payment tokenization
+     - Order completion
+     - Order event emissions (webhooks)
+     - Error scenario handling
+     - Idempotency verification
+     - Legal link functionality
+     - IP egress range compatibility
 
-2. **Configuration:**
+2. **Production Configuration:**
    - Set production API keys
-   - Configure signature secret (if using)
-   - Set up webhook endpoint
+   - Configure signature secret (recommended for production)
+   - Set up webhook endpoint URL
    - Configure product feed categories
+   - Enable TLS 1.2+ on port 443
+   - Review PCI compliance requirements
 
-3. **Submission:**
-   - Submit to OpenAI for review
-   - Provide test credentials
+3. **Submit for OpenAI Certification:**
+   - **Application Form:** https://chatgpt.com/merchants
+   - Provide test environment credentials
    - Share product feed URL
-   - Document any store-specific setup
+   - Submit request/response logs for all test scenarios
+   - Document store-specific setup
+   - Pass OpenAI conformance checks
+
+4. **Production Access:**
+   - OpenAI reviews implementation
+   - Pass conformance checks
+   - Receive production approval
+   - Go live in ChatGPT Instant Checkout
+
+**Important:** Instant Checkout in ChatGPT is currently available to approved partners only.
 
 ---
 
