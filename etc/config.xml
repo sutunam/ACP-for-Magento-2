@@ -13,6 +13,7 @@
             <general>
                 <enabled>0</enabled>
                 <test_mode>0</test_mode>
+                <session_retention_days>30</session_retention_days>
             </general>
             <product_feed>
                 <enabled>0</enabled>
@@ -21,6 +22,10 @@
             <webhooks>
                 <enabled>0</enabled>
             </webhooks>
+            <security>
+                <signature_validation_enabled>0</signature_validation_enabled>
+                <timestamp_tolerance>300</timestamp_tolerance>
+            </security>
             <stripe>
                 <active>0</active>
                 <test_mode>1</test_mode>
