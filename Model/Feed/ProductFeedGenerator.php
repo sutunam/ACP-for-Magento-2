@@ -12,7 +12,11 @@ namespace RunAsRoot\AgenticCommerceProtocol\Model\Feed;
 
 use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Catalog\Api\ProductRepositoryInterface;
+use Magento\Catalog\Model\Product\Attribute\Source\Status;
+use Magento\Catalog\Model\Product\Gallery\ReadHandler as GalleryReadHandler;
 use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory;
+use Magento\CatalogInventory\Api\StockRegistryInterface;
+use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\Framework\App\CacheInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Serialize\SerializerInterface;
@@ -35,7 +39,10 @@ class ProductFeedGenerator
         private readonly StoreManagerInterface $storeManager,
         private readonly ProductRepositoryInterface $productRepository,
         private readonly CacheInterface $cache,
-        private readonly SerializerInterface $serializer
+        private readonly SerializerInterface $serializer,
+        private readonly StockRegistryInterface $stockRegistry,
+        private readonly GalleryReadHandler $galleryReadHandler,
+        private readonly Configurable $configurableType
     ) {
     }
 
@@ -95,7 +102,7 @@ class ProductFeedGenerator
     {
         $collection = $this->productCollectionFactory->create();
         
-        // Add attributes needed for feed
+        // Add attributes needed for feed (ACP spec requirements)
         $collection->addAttributeToSelect([
             'name',
             'sku',
@@ -104,7 +111,10 @@ class ProductFeedGenerator
             'short_description',
             'image',
             'status',
-            'visibility'
+            'visibility',
+            'manufacturer', // Brand per ACP spec
+            'gtin',        // Global Trade Item Number
+            'mpn'          // Manufacturer Part Number
         ]);
 
         // Only visible, enabled, in-stock products
@@ -125,27 +135,58 @@ class ProductFeedGenerator
     }
 
     /**
-     * Format product for feed
+     * Format product for feed per ACP specification
      */
     private function formatProduct(ProductInterface $product): array
     {
         $store = $this->storeManager->getStore();
+        $currencyCode = $store->getCurrentCurrency()->getCode();
 
-        return [
-            'sku' => $product->getSku(),
-            'name' => $product->getName(),
+        // Build ACP-compliant product data
+        $data = [
+            // Required fields
+            'id' => (string)$product->getId(),
+            'title' => $product->getName(), // ACP spec uses 'title' not 'name'
             'description' => $this->cleanDescription($product->getDescription()),
-            'short_description' => $this->cleanDescription($product->getShortDescription()),
+            'link' => $product->getProductUrl(), // ACP spec uses 'link' not 'url'
             'price' => [
-                'amount' => $this->getProductPrice($product),
-                'currency' => $store->getCurrentCurrency()->getCode()
+                'amount' => $this->convertToCents($this->getProductPrice($product)),
+                'currency' => $currencyCode
             ],
-            'product_type' => $product->getTypeId(),
-            'url' => $product->getProductUrl(),
-            'image_url' => $this->getProductImageUrl($product),
             'availability' => $product->isSalable() ? 'in_stock' : 'out_of_stock',
-            'categories' => $this->getProductCategoryNames($product)
+
+            // Recommended fields
+            'sku' => $product->getSku(),
+            'images' => $this->getAllProductImages($product),
+            'brand' => $this->getBrand($product),
+            'categories' => $this->getProductCategoryNames($product),
+
+            // ACP spec flags
+            'enable_search' => true,
+            'enable_checkout' => $product->isSalable(),
+
+            // Inventory
+            'inventory_quantity' => $this->getInventoryQuantity($product),
         ];
+
+        // Add GTIN if available
+        $gtin = $product->getData('gtin');
+        if ($gtin) {
+            $data['gtin'] = $gtin;
+        }
+
+        // Add MPN if available
+        $mpn = $product->getData('mpn');
+        if ($mpn) {
+            $data['mpn'] = $mpn;
+        }
+
+        // Add variants for configurable products
+        if ($product->getTypeId() === 'configurable') {
+            $data['variants'] = $this->getProductVariants($product);
+        }
+
+        return $data;
     }
 
     /**
@@ -254,5 +295,99 @@ class ProductFeedGenerator
         }
 
         return array_filter(explode(',', $categories));
+    }
+
+    /**
+     * Get all product images (not just primary)
+     */
+    private function getAllProductImages(ProductInterface $product): array
+    {
+        $images = [];
+        $store = $this->storeManager->getStore();
+        $baseUrl = $store->getBaseUrl(UrlInterface::URL_TYPE_MEDIA) . 'catalog/product';
+
+        // Load gallery images
+        $this->galleryReadHandler->execute($product);
+        $galleryImages = $product->getMediaGalleryImages();
+
+        if ($galleryImages) {
+            foreach ($galleryImages as $image) {
+                $images[] = $baseUrl . $image->getFile();
+            }
+        } elseif ($product->getImage() && $product->getImage() !== 'no_selection') {
+            // Fallback to primary image
+            $images[] = $baseUrl . $product->getImage();
+        }
+
+        return $images;
+    }
+
+    /**
+     * Get brand/manufacturer
+     */
+    private function getBrand(ProductInterface $product): ?string
+    {
+        $manufacturerId = $product->getData('manufacturer');
+        if ($manufacturerId) {
+            $attribute = $product->getResource()->getAttribute('manufacturer');
+            if ($attribute && $attribute->usesSource()) {
+                return $attribute->getSource()->getOptionText($manufacturerId);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get inventory quantity
+     */
+    private function getInventoryQuantity(ProductInterface $product): int
+    {
+        try {
+            $stockItem = $this->stockRegistry->getStockItemBySku($product->getSku());
+            return (int)$stockItem->getQty();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Get product variants for configurables
+     */
+    private function getProductVariants(ProductInterface $product): array
+    {
+        $variants = [];
+
+        try {
+            $childProducts = $this->configurableType->getUsedProducts($product);
+
+            foreach ($childProducts as $child) {
+                $variants[] = [
+                    'id' => (string)$child->getId(),
+                    'sku' => $child->getSku(),
+                    'title' => $child->getName(),
+                    'price' => [
+                        'amount' => $this->convertToCents((float)$child->getFinalPrice()),
+                        'currency' => $this->storeManager->getStore()->getCurrentCurrency()->getCode()
+                    ],
+                    'availability' => $child->isSalable() ? 'in_stock' : 'out_of_stock',
+                    'inventory_quantity' => $this->getInventoryQuantity($child),
+                ];
+            }
+        } catch (\Exception $e) {
+            // If can't load variants, return empty array
+            return [];
+        }
+
+        return $variants;
+    }
+
+    /**
+     * Convert dollar amount to cents (integer)
+     * ACP spec requires monetary values as non-negative integers
+     */
+    private function convertToCents(float $amount): int
+    {
+        return (int)round($amount * 100);
     }
 }
