@@ -364,4 +364,4 @@ Before submitting to OpenAI:
 **Total Commits:** 5 major feature commits
 **Development Time:** ~2 hours (estimated 3-4 days → completed in 1 session!)
 
-**Maintainer:** Run_As_Root <hello@run-as-root.sh>
+**Maintainer:** run_as_root GmbH <info@run-as-root.sh>

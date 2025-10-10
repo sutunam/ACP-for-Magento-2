@@ -1,7 +1,7 @@
 <?php
 /**
- * @author    Run_As_Root <hello@run-as-root.sh>
- * @copyright 2025 Run_As_Root
+ * @author    run_as_root GmbH <info@run-as-root.sh>
+ * @copyright 2025 run_as_root GmbH
  * @license   https://opensource.org/license/mit  MIT License
  * @link      https://run-as-root.sh/
  */

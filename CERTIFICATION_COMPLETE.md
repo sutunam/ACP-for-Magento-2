@@ -262,6 +262,6 @@ This implementation enables Magento merchants to:
 ---
 
 **Version:** V1.5 (Certification Ready)
-**Maintainer:** Run_As_Root <hello@run-as-root.sh>
+**Maintainer:** run_as_root GmbH <info@run-as-root.sh>
 **License:** MIT
 **Support:** Issues at https://github.com/run-as-root/ACP-for-Magento-2/issues
