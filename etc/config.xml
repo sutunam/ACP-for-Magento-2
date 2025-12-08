@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @author    run_as_root GmbH <info@run-as-root.sh>
+ * @copyright 2025 run_as_root GmbH
+ * @license   https://opensource.org/license/mit  MIT License
+ * @link      https://run-as-root.sh/
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <acp>
+            <general>
+                <enabled>0</enabled>
+                <test_mode>0</test_mode>
+                <session_retention_days>30</session_retention_days>
+            </general>
+            <product_feed>
+                <enabled>0</enabled>
+                <max_products>1000</max_products>
+            </product_feed>
+            <webhooks>
+                <enabled>0</enabled>
+            </webhooks>
+            <security>
+                <signature_validation_enabled>0</signature_validation_enabled>
+                <timestamp_tolerance>300</timestamp_tolerance>
+            </security>
+            <stripe>
+                <active>0</active>
+                <test_mode>1</test_mode>
+            </stripe>
+        </acp>
+    </default>
+</config>

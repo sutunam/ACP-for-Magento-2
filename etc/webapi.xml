@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @author    run_as_root GmbH <info@run-as-root.sh>
+ * @copyright 2025 run_as_root GmbH
+ * @license   https://opensource.org/license/mit  MIT License
+ * @link      https://run-as-root.sh/
+ */
+-->
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Webapi:etc/webapi.xsd">
+    <!-- Create Checkout Session -->
+    <route url="/V1/acp/checkout_sessions" method="POST">
+        <service class="RunAsRoot\AgenticCommerceProtocol\Api\CheckoutSessionManagementInterface" method="create"/>
+        <resources>
+            <resource ref="anonymous"/>
+        </resources>
+    </route>
+    
+    <!-- Update Checkout Session -->
+    <route url="/V1/acp/checkout_sessions/:checkoutSessionId" method="POST">
+        <service class="RunAsRoot\AgenticCommerceProtocol\Api\CheckoutSessionManagementInterface" method="update"/>
+        <resources>
+            <resource ref="anonymous"/>
+        </resources>
+    </route>
+    
+    <!-- Get Checkout Session -->
+    <route url="/V1/acp/checkout_sessions/:checkoutSessionId" method="GET">
+        <service class="RunAsRoot\AgenticCommerceProtocol\Api\CheckoutSessionManagementInterface" method="get"/>
+        <resources>
+            <resource ref="anonymous"/>
+        </resources>
+    </route>
+    
+    <!-- Complete Checkout Session -->
+    <route url="/V1/acp/checkout_sessions/:checkoutSessionId/complete" method="POST">
+        <service class="RunAsRoot\AgenticCommerceProtocol\Api\CheckoutSessionManagementInterface" method="complete"/>
+        <resources>
+            <resource ref="anonymous"/>
+        </resources>
+    </route>
+    
+    <!-- Cancel Checkout Session -->
+    <route url="/V1/acp/checkout_sessions/:checkoutSessionId/cancel" method="POST">
+        <service class="RunAsRoot\AgenticCommerceProtocol\Api\CheckoutSessionManagementInterface" method="cancel"/>
+        <resources>
+            <resource ref="anonymous"/>
+        </resources>
+    </route>
+</routes>

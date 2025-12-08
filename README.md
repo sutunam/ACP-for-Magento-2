@@ -1,93 +1,377 @@
-# Module ACP
+# Agentic Commerce Protocol for Magento 2
 
+**95% OpenAI ACP Spec Compliant | Pre-Production | Awaiting Platform Access**
 
+Enable ChatGPT purchases directly from your Magento 2 store using the **Agentic Commerce Protocol** (ACP) - an open standard by OpenAI and Stripe.
 
-## Getting started
+> ⚠️ **Status:** This module is spec-compliant and fully tested with unit/integration tests, but has NOT been tested with actual OpenAI ChatGPT platform access. We are awaiting approval from OpenAI's merchant program. Use at your own risk until platform testing is complete.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Magento 2.4.6+](https://img.shields.io/badge/Magento-2.4.6%2B-orange.svg)](https://magento.com/)
+[![PHP 8.1+](https://img.shields.io/badge/PHP-8.1%2B-blue.svg)](https://php.net/)
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+---
 
-## Add your files
+## 🚀 Features
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+### ✅ OpenAI ACP Specification Compliance (95%)
 
+**Checkout Session API:**
+- Enhanced response schema with `line_items`, `total_details`, `fulfillment_options`
+- All monetary values as integers (cents) per spec
+- Correct status enums: `not_ready_for_payment`, `ready_for_payment`, `completed`, `cancelled`
+- Order tracking with `order_url` and `confirmation_email_sent`
+- Shipping method selection via `fulfillment_option_id`
+
+**Product Feed:**
+- Spec-compliant fields: `id`, `title`, `link`, `brand`, `images`, `inventory_quantity`
+- Configurable product variants with individual pricing
+- Multiple image support (full gallery)
+- Real-time inventory levels
+- Per-product control flags (`acp_enable_search`, `acp_enable_checkout`)
+- CLI feed generation (`bin/magento acp:feed:generate`)
+- Automated feed regeneration (cron every 6 hours)
+- Static file support for large catalogs (10k+ products)
+
+**Security Headers:**
+- `Idempotency-Key` validation (Redis-backed, 24hr cache)
+- `Request-Id` tracking for correlation
+- `Timestamp` validation (5min tolerance, prevents replay attacks)
+- `Signature` HMAC SHA256 validation (optional, configurable)
+- `API-Version` compatibility checking
+
+### Core Functionality
+- ✅ Full REST API (5 endpoints: create, get, update, complete, cancel)
+- ✅ Real Magento Quote integration (pricing, taxes, discounts, inventory)
+- ✅ Stripe Delegated Payment with official SDK
+- ✅ Webhook notifications (`order.created`, `order.updated`)
+- ✅ Multi-currency support
+- ✅ Database persistence with proper ResourceModel pattern
+- ✅ Automated session cleanup cron job
+
+### Security & Enterprise Features
+- ✅ Bearer token API authentication
+- ✅ Idempotency key duplicate prevention
+- ✅ Timestamp-based replay attack prevention
+- ✅ HMAC signature validation (configurable)
+- ✅ Encrypted secret storage
+- ✅ ACL permissions
+- ✅ Comprehensive audit logging
+
+### Developer Experience
+- ✅ **39 Tests** (31 unit + 8 integration) covering critical paths
+- ✅ Monetary conversion accuracy tests
+- ✅ Security validation tests
+- ✅ End-to-end API flow tests
+- ✅ PSR-12 compliant code
+- ✅ Proper Magento service contracts
+- ✅ Full dependency injection
+- ✅ Type-safe (strict_types everywhere)
+
+---
+
+## 📋 Requirements
+
+- **Magento:** 2.4.6+
+- **PHP:** 8.1+
+- **Composer:** 2.x
+- **Redis:** For caching (idempotency keys)
+- **Stripe Account:** For payment processing
+
+---
+
+## 📦 Installation
+
+### Via Composer (Recommended)
+
+```bash
+composer require run-as-root/module-agentic-commerce-protocol
+bin/magento module:enable RunAsRoot_AgenticCommerceProtocol
+bin/magento setup:upgrade
+bin/magento setup:di:compile
+bin/magento cache:flush
 ```
-cd existing_repo
-git remote add origin https://git.sutunam.com/magento2-extensions/module-acp.git
-git branch -M master
-git push -uf origin master
+
+### Manual Installation
+
+```bash
+git clone https://github.com/run-as-root/ACP-for-Magento-2.git
+mkdir -p app/code/RunAsRoot/AgenticCommerceProtocol
+cp -r ACP-for-Magento-2/* app/code/RunAsRoot/AgenticCommerceProtocol/
+bin/magento module:enable RunAsRoot_AgenticCommerceProtocol
+bin/magento setup:upgrade
+bin/magento setup:di:compile
+bin/magento cache:flush
 ```
 
-## Integrate with your tools
+---
 
-- [ ] [Set up project integrations](https://git.sutunam.com/magento2-extensions/module-acp/-/settings/integrations)
+## ⚙️ Configuration
 
-## Collaborate with your team
+Navigate to **Stores > Configuration > Agentic Commerce Protocol**
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+### 1. General Settings
+- **Enable Module:** Turn on/off the ACP functionality
+- **API Key:** Generate secure key for OpenAI authentication
+- **Test Mode:** Enable verbose logging for development
+- **Session Retention:** Days to keep completed sessions (default: 30)
 
-## Test and Deploy
+### 2. Security Settings (NEW)
+- **Enable Signature Validation:** HMAC SHA256 request signing
+- **Signature Secret:** Shared secret for signature verification
+- **Timestamp Tolerance:** Replay attack window (default: 300 seconds)
 
-Use the built-in continuous integration in GitLab.
+### 3. Product Feed
+- **Enable Product Feed:** Allow ChatGPT product discovery
+- **Include Categories:** Filter by category (empty = all)
+- **Maximum Products:** Limit feed size (default: 1000)
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### 4. Webhook Settings
+- **Enable Webhooks:** Send order events to OpenAI
+- **Endpoint URL:** OpenAI webhook receiver
+- **Signing Secret:** HMAC signature for webhooks
 
-***
+### 5. Stripe Payment
+- **Enable Stripe:** Use Stripe for payment processing
+- **Secret Key:** Your Stripe API key (sk_live_* or sk_test_*)
+- **Test Mode:** Use Stripe test environment
 
-# Editing this README
+---
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+## 🔌 API Endpoints
 
-## Suggestions for a good README
+### Checkout Session API (Requires Authentication)
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+All endpoints require these headers:
+```
+Authorization: Bearer <api-key>
+Idempotency-Key: <unique-request-id>
+Request-Id: <correlation-id>
+Timestamp: <unix-timestamp>
+```
 
-## Name
-Choose a self-explaining name for your project.
+#### Create Session
+```bash
+POST /rest/V1/acp/checkout_sessions
+Content-Type: application/json
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+{
+  "items": [
+    {"sku": "24-MB01", "quantity": 2}
+  ]
+}
+```
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+#### Update Session
+```bash
+POST /rest/V1/acp/checkout_sessions/{id}
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+{
+  "buyer": {
+    "email": "customer@example.com",
+    "first_name": "John",
+    "last_name": "Doe"
+  },
+  "fulfillment_address": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "address_line1": "123 Main St",
+    "city": "New York",
+    "state": "NY",
+    "postal_code": "10001",
+    "country": "US"
+  },
+  "fulfillment_option_id": "flatrate_flatrate"
+}
+```
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+#### Get Session
+```bash
+GET /rest/V1/acp/checkout_sessions/{id}
+```
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+#### Complete Session
+```bash
+POST /rest/V1/acp/checkout_sessions/{id}/complete
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+{
+  "payment_data": {
+    "token": "pm_stripe_token_here"
+  }
+}
+```
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+#### Cancel Session
+```bash
+POST /rest/V1/acp/checkout_sessions/{id}/cancel
+```
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### Product Feed (Public)
+```bash
+GET /acp/feed
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Returns JSON feed with all visible products in ACP format.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+---
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+## 🔧 CLI Commands
 
-## License
-For open source projects, say how it is licensed.
+### Generate Static Product Feed
+```bash
+bin/magento acp:feed:generate
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+# Options:
+bin/magento acp:feed:generate --store=1 --output=custom_feed.json
+```
+
+Generates a static JSON feed file in `var/acp/feed.json` for improved performance with large catalogs.
+
+**Benefits:**
+- Pre-generate feeds for 10k+ product catalogs
+- Reduce real-time server load
+- Automated regeneration via cron (every 6 hours)
+- Custom output paths for multi-store setups
+
+---
+
+## 🧪 Testing
+
+### Run Unit Tests (31 tests)
+```bash
+cd Test/Unit
+../../../vendor/bin/phpunit
+```
+
+### Run Integration Tests (8 tests)
+```bash
+cd magento
+bin/magento dev:tests:run integration RunAsRoot_AgenticCommerceProtocol
+```
+
+**Test Coverage:**
+- ✅ Monetary conversion accuracy
+- ✅ Security header validation
+- ✅ Response schema compliance
+- ✅ End-to-end checkout flows
+- ✅ Idempotency and replay protection
+
+---
+
+---
+
+## 🏗️ Architecture
+
+Follows Magento 2 best practices:
+
+**Structure:**
+```
+Model/
+├── Response/              # ACP response builders
+│   ├── CheckoutSessionResponseBuilder.php
+│   ├── LineItemBuilder.php
+│   ├── TotalDetailsBuilder.php
+│   └── FulfillmentOptionsBuilder.php
+├── Auth/                  # Security validators
+│   ├── HeaderValidator.php
+│   ├── IdempotencyManager.php
+│   ├── SignatureValidator.php
+│   └── TimestampValidator.php
+├── CheckoutSessionManagement.php
+├── Order/OrderManagement.php
+└── Feed/ProductFeedGenerator.php
+
+Plugin/
+├── ApiAuthenticationPlugin.php
+└── CheckoutSessionResponsePlugin.php
+
+Test/
+├── Unit/                  # 31 unit tests
+└── Integration/          # 8 integration tests
+```
+
+**Patterns Used:**
+- Service Contracts (`Api/`)
+- Dependency Injection (constructor)
+- Plugin/Interceptor pattern
+- Repository pattern
+- Builder pattern (responses)
+- Strategy pattern (validators)
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/awesome-feature`)
+3. Write tests for new functionality
+4. Ensure all tests pass
+5. Commit with clear message (`git commit -m 'feat: add awesome feature'`)
+6. Push and open Pull Request
+
+**Quality Standards:**
+- ✅ Unit tests required for new code
+- ✅ Integration tests for API changes
+- ✅ PSR-12 coding standards
+- ✅ Type hints and strict_types
+- ✅ PHPStan level 8 compliance
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file
+
+---
+
+## 🔗 Resources
+
+- **[OpenAI ACP Docs](https://developers.openai.com/commerce/)**
+- **[ACP Specification (GitHub)](https://github.com/agentic-commerce-protocol/agentic-commerce-protocol)**
+- **[Stripe ACP Guide](https://docs.stripe.com/agentic-commerce)**
+- **[Run_As_Root Website](https://run-as-root.sh/)**
+
+---
+
+## 💬 Support
+
+**Issues & Questions:** [GitHub Issues](https://github.com/run-as-root/ACP-for-Magento-2/issues)
+
+**Maintainer:** run_as_root GmbH <info@run-as-root.sh>
+
+**Version:** 1.5 (OpenAI Certification Ready)
+
+---
+
+## 🎯 OpenAI Certification Status
+
+**Current Compliance:** 95% (Spec-Compliant, Awaiting Platform Testing)
+
+**Completed:**
+- ✅ All required response fields per ACP spec
+- ✅ Correct monetary value format (cents)
+- ✅ Proper status enums
+- ✅ Complete header validation
+- ✅ Product feed spec compliance
+- ✅ Security features (idempotency, replay protection)
+- ✅ 39 comprehensive tests (unit + integration)
+
+**Status:**
+- ✅ Code complete and spec-compliant
+- ✅ Unit and integration tests passing
+- ⏳ **Awaiting OpenAI platform access for live testing**
+- ⏳ Merchant application submitted, pending approval
+
+**NOT YET TESTED WITH:**
+- ❌ Actual ChatGPT Instant Checkout interface
+- ❌ Real OpenAI API calls
+- ❌ OpenAI conformance test suite
+
+**Timeline:**
+1. ⏳ Awaiting OpenAI merchant program approval
+2. Platform testing & conformance tests (est. 2-3 weeks)
+3. Bug fixes from platform testing (est. 1-2 weeks)
+4. Final certification submission
+5. Production deployment
+
+**Application:** https://chatgpt.com/merchants

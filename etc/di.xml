@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @author    run_as_root GmbH <info@run-as-root.sh>
+ * @copyright 2025 run_as_root GmbH
+ * @license   https://opensource.org/license/mit  MIT License
+ * @link      https://run-as-root.sh/
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="RunAsRoot\AgenticCommerceProtocol\Api\CheckoutSessionManagementInterface"
+                type="RunAsRoot\AgenticCommerceProtocol\Model\CheckoutSessionManagement"/>
+    <preference for="RunAsRoot\AgenticCommerceProtocol\Api\Data\CheckoutSessionInterface"
+                type="RunAsRoot\AgenticCommerceProtocol\Model\Checkout\Session"/>
+
+    <!-- API Authentication Plugin -->
+    <type name="Magento\Webapi\Controller\Rest">
+        <plugin name="acp_api_authentication"
+                type="RunAsRoot\AgenticCommerceProtocol\Plugin\ApiAuthenticationPlugin"
+                sortOrder="10"/>
+    </type>
+
+    <!-- Checkout Session Response Plugin -->
+    <type name="RunAsRoot\AgenticCommerceProtocol\Api\CheckoutSessionManagementInterface">
+        <plugin name="acp_checkout_session_response"
+                type="RunAsRoot\AgenticCommerceProtocol\Plugin\CheckoutSessionResponsePlugin"
+                sortOrder="100"/>
+    </type>
+
+    <!-- Custom Logger -->
+    <type name="RunAsRoot\AgenticCommerceProtocol\Logger\Handler">
+        <arguments>
+            <argument name="filesystem" xsi:type="object">Magento\Framework\Filesystem\Driver\File</argument>
+        </arguments>
+    </type>
+    <type name="RunAsRoot\AgenticCommerceProtocol\Logger\Logger">
+        <arguments>
+            <argument name="name" xsi:type="string">acpLogger</argument>
+            <argument name="handlers" xsi:type="array">
+                <item name="system" xsi:type="object">RunAsRoot\AgenticCommerceProtocol\Logger\Handler</item>
+            </argument>
+        </arguments>
+    </type>
+
+    <!-- Console Commands -->
+    <type name="Magento\Framework\Console\CommandListInterface">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="acpGenerateFeed" xsi:type="object">RunAsRoot\AgenticCommerceProtocol\Console\Command\GenerateFeedCommand</item>
+            </argument>
+        </arguments>
+    </type>
+</config>
