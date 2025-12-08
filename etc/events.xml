@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @author    run_as_root GmbH <info@run-as-root.sh>
+ * @copyright 2025 run_as_root GmbH
+ * @license   https://opensource.org/license/mit  MIT License
+ * @link      https://run-as-root.sh/
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+    <!-- Order Created -->
+    <event name="sales_order_save_commit_after">
+        <observer name="acp_order_created" instance="RunAsRoot\AgenticCommerceProtocol\Observer\OrderCreatedObserver"/>
+    </event>
+    
+    <!-- Order Updated -->
+    <event name="sales_order_save_after">
+        <observer name="acp_order_updated" instance="RunAsRoot\AgenticCommerceProtocol\Observer\OrderUpdatedObserver"/>
+    </event>
+</config>

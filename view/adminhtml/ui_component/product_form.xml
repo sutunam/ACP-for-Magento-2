@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * @author    run_as_root GmbH <info@run-as-root.sh>
+ * @copyright 2025 run_as_root GmbH
+ * @license   https://opensource.org/license/mit  MIT License
+ * @link      https://run-as-root.sh/
+ */
+-->
+<form xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <fieldset name="agentic-commerce">
+        <settings>
+            <label translate="true">Agentic Commerce</label>
+            <collapsible>true</collapsible>
+            <opened>false</opened>
+        </settings>
+        <field name="acp_enable_search" formElement="checkbox">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="source" xsi:type="string">product</item>
+                    <item name="default" xsi:type="number">1</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Enable Agentic Search</label>
+                <dataScope>acp_enable_search</dataScope>
+                <tooltip>
+                    <description translate="true">Show this product in ChatGPT product discovery and search results</description>
+                </tooltip>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+        <field name="acp_enable_checkout" formElement="checkbox">
+            <argument name="data" xsi:type="array">
+                <item name="config" xsi:type="array">
+                    <item name="source" xsi:type="string">product</item>
+                    <item name="default" xsi:type="number">1</item>
+                </item>
+            </argument>
+            <settings>
+                <dataType>boolean</dataType>
+                <label translate="true">Enable Agentic Checkout</label>
+                <dataScope>acp_enable_checkout</dataScope>
+                <tooltip>
+                    <description translate="true">Allow instant checkout for this product via ChatGPT. If disabled, product will appear in search but cannot be purchased.</description>
+                </tooltip>
+            </settings>
+            <formElements>
+                <checkbox>
+                    <settings>
+                        <valueMap>
+                            <map name="false" xsi:type="number">0</map>
+                            <map name="true" xsi:type="number">1</map>
+                        </valueMap>
+                        <prefer>toggle</prefer>
+                    </settings>
+                </checkbox>
+            </formElements>
+        </field>
+    </fieldset>
+</form>
