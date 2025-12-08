@@ -12,7 +12,7 @@ namespace RunAsRoot\AgenticCommerceProtocol\Model\Feed\Generator;
 
 use Magento\Framework\Exception\FileSystemException;
 use Magento\Framework\Filesystem;
-use Magento\Framework\Filesystem\DirectoryList;
+use Magento\Framework\App\Filesystem\DirectoryList;
 use Magento\Framework\Serialize\SerializerInterface;
 use RunAsRoot\AgenticCommerceProtocol\Model\Feed\ProductFeedGenerator;
 
