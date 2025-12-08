@@ -22,6 +22,7 @@ use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Serialize\SerializerInterface;
 use Magento\Framework\UrlInterface;
 use Magento\Store\Model\StoreManagerInterface;
+use Magento\Catalog\Model\ResourceModel\Category\CollectionFactory as CategoryCollectionFactory;
 
 /**
  * Generates product feed for ChatGPT discovery
@@ -33,6 +34,25 @@ class ProductFeedGenerator
     private const CACHE_TAG = 'acp_product_feed';
     private const CACHE_LIFETIME = 3600; // 1 hour
 
+    /**
+     * @var string
+     */
+    private $currencyCode;
+
+    /**
+     * Constructor
+     *
+     * @param CollectionFactory $productCollectionFactory
+     * @param ScopeConfigInterface $scopeConfig
+     * @param StoreManagerInterface $storeManager
+     * @param ProductRepositoryInterface $productRepository
+     * @param CacheInterface $cache
+     * @param SerializerInterface $serializer
+     * @param StockRegistryInterface $stockRegistry
+     * @param GalleryReadHandler $galleryReadHandler
+     * @param Configurable $configurableType
+     * @param CategoryCollectionFactory $categoryCollectionFactory
+     */
     public function __construct(
         private readonly CollectionFactory $productCollectionFactory,
         private readonly ScopeConfigInterface $scopeConfig,
@@ -42,14 +62,19 @@ class ProductFeedGenerator
         private readonly SerializerInterface $serializer,
         private readonly StockRegistryInterface $stockRegistry,
         private readonly GalleryReadHandler $galleryReadHandler,
-        private readonly Configurable $configurableType
+        private readonly Configurable $configurableType,
+        private readonly CategoryCollectionFactory $categoryCollectionFactory
     ) {
     }
 
     /**
      * Generate product feed as JSON (with caching)
+     *
+     * @return mixed
+     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
      */
-    public function generate(): array
+    public function generate()
     {
         $cacheKey = $this->getCacheKey();
 
@@ -71,18 +96,28 @@ class ProductFeedGenerator
 
             $feed[] = $this->formatProduct($product);
         }
-
+        /** @var \Magento\Store\Model\Store $store */
+        $store = $this->storeManager->getStore();
         $result = [
             'products' => $feed,
             'total_count' => count($feed),
             'generated_at' => date('c'),
-            'store' => $this->storeManager->getStore()->getName(),
-            'supported_currencies' => $this->storeManager->getStore()->getAvailableCurrencyCodes(true)
+            'store' => $store->getName(),
+            'supported_currencies' => $store->getAvailableCurrencyCodes(true),
+            // Merchant Info
+            'seller_name' => $store->getName(),
+            'seller_url' => $store->getBaseUrl(),
+            'seller_privacy_policy' => $store->getBaseUrl() . 'privacy', // create cms page for this field
+            'seller_tos' => $store->getBaseUrl() . 'terms', // create cms page for this field
+
+            //Returns
+            'return_policy' => $store->getBaseUrl() . 'returns', // create cms page for this field
+            'return_window' => 30,
         ];
 
         // Save to cache
         $this->cache->save(
-            $this->serializer->serialize($result),
+            (string)$this->serializer->serialize($result),
             $cacheKey,
             [self::CACHE_TAG],
             self::CACHE_LIFETIME
@@ -102,26 +137,33 @@ class ProductFeedGenerator
 
     /**
      * Get products for feed
+     *
+     * @return mixed
      */
-    private function getProducts(): array
+    private function getProducts()
     {
         $collection = $this->productCollectionFactory->create();
-        
+
         // Add attributes needed for feed (ACP spec requirements)
         $collection->addAttributeToSelect([
             'name',
             'sku',
+            'type_id',
             'price',
+            'special_price',
             'description',
             'short_description',
             'image',
             'status',
             'visibility',
+            'weight',
             'manufacturer',        // Brand per ACP spec
             'gtin',                // Global Trade Item Number
             'mpn',                 // Manufacturer Part Number
             'acp_enable_search',   // Per-product search control
-            'acp_enable_checkout'  // Per-product checkout control
+            'acp_enable_checkout',  // Per-product checkout control
+            'material',
+            'condition'  //new, refurbished, used
         ]);
 
         // Only visible, enabled, in-stock products
@@ -143,30 +185,42 @@ class ProductFeedGenerator
 
     /**
      * Format product for feed per ACP specification
+     *
+     * @param ProductInterface $product
+     * @return mixed
+     * @throws \Magento\Framework\Exception\LocalizedException
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
      */
-    private function formatProduct(ProductInterface $product): array
+    private function formatProduct(ProductInterface $product)
     {
+        /** @var \Magento\Catalog\Model\Product $product */
+        /** @var \Magento\Store\Model\Store $store */
         $store = $this->storeManager->getStore();
         $currencyCode = $store->getCurrentCurrency()->getCode();
+        $this->currencyCode = $currencyCode;
 
+        $regularPrice = $this->getProductPrice($product);
         // Build ACP-compliant product data
         $data = [
             // Required fields
-            'id' => (string)$product->getId(),
+            'id' => (string)$product->getSku(),
             'title' => $product->getName(), // ACP spec uses 'title' not 'name'
             'description' => $this->cleanDescription($product->getDescription()),
             'link' => $product->getProductUrl(), // ACP spec uses 'link' not 'url'
-            'price' => [
-                'amount' => $this->convertToCents($this->getProductPrice($product)),
-                'currency' => $currencyCode
-            ],
+            'price' => $this->formatPrice($regularPrice, $currencyCode),
             'availability' => $product->isSalable() ? 'in_stock' : 'out_of_stock',
+            'type_id' => $product->getTypeId(),
+            'product_category' => $this->getProductCategory($product),
+            'brand' => $this->getBrand($product),
+            'material' => $this->getMaterial($product),
+            'weight' => $this->getWeightFormatted($product),
+            'image_link' => $this->getMainImage($product),
 
             // Recommended fields
-            'sku' => $product->getSku(),
-            'images' => $this->getAllProductImages($product),
-            'brand' => $this->getBrand($product),
-            'categories' => $this->getProductCategoryNames($product),
+            'additional_image_link' => $this->getAdditionalImages($product),
+            'length' => $product->getData('length') ?? '',
+            'width' => $product->getData('width') ?? '',
+            'height' => $product->getData('length') ?? '',
 
             // ACP spec flags (use product attributes, fallback to defaults)
             'enable_search' => $product->getData('acp_enable_search') !== '0',
@@ -175,6 +229,47 @@ class ProductFeedGenerator
             // Inventory
             'inventory_quantity' => $this->getInventoryQuantity($product),
         ];
+        // ====== Add variant fields if simple and has parent configurable ======
+        if ($product->getTypeId() === 'simple'
+            && $parentIds = $this->configurableType->getParentIdsByChild($product->getId())) {
+            // Take first parent configurable
+            $parentId = $parentIds[0];
+            $parentProduct = $this->productRepository->getById($parentId);
+
+            $data['item_group_id'] = $parentProduct->getSku();
+            $data['item_group_title'] = $parentProduct->getName();
+
+            if ($color = $product->getAttributeText('color')) {
+                $data['color'] = $color;
+            }
+            if ($size = $product->getAttributeText('size')) {
+                $data['size'] = $size;
+            }
+            if ($sizeSystem = $product->getData('size_system')) {
+                $data['size_system'] = strtoupper($sizeSystem);
+            }
+            if ($gender = $product->getData('gender')) {
+                $data['gender'] = strtolower($gender);
+            }
+
+            // offer_id: SKU + color + price
+            $priceValue = $this->getProductPrice($product);
+            /** @phpstan-ignore-next-line */
+            $data['offer_id'] = sprintf('%s-%s-%s', $product->getSku(), $data['color'] ?? 'NA', $priceValue);
+        }
+        $salePrice    = $this->getSalePrice($product);
+
+        if ($salePrice !== null && $salePrice < $regularPrice) {
+            $data['sale_price'] = $this->formatPrice($salePrice, $currencyCode);
+        }
+
+        $condition = $this->getCondition($product);
+
+        if ($condition !== 'new') {
+            $data['condition'] = $condition;
+        } else {
+            $data['condition'] = 'new';
+        }
 
         // Add GTIN if available
         $gtin = $product->getData('gtin');
@@ -188,6 +283,36 @@ class ProductFeedGenerator
             $data['mpn'] = $mpn;
         }
 
+        //Fulfillment
+        $data['shipping'] = ''; //TODO: implement later
+        $data['delivery_estimate'] = ''; //TODO: implement later
+
+        //Performance Signals
+        $data['popularity_score'] = ''; //TODO: implement later
+        $data['return_rate'] = ''; //TODO: implement later
+
+        //Compliance
+        $data['warning'] = ''; //TODO: implement later
+        $data['age_restriction'] = ''; //TODO: implement later
+
+        //Reviews and Q&A
+        $data['product_review_count'] = ''; //TODO: implement later
+        $data['product_review_rating'] = ''; //TODO: implement later
+        $data['store_review_count'] = ''; //TODO: implement later
+        $data['store_review_rating'] = ''; //TODO: implement later
+        $data['q_and_a'] = ''; //TODO: implement later
+        $data['raw_review_data'] = ''; //TODO: implement later
+
+        //Related Products
+        if ($this->getRelatedProducts($product)) {
+            $data['related_products'] = $this->getRelatedProducts($product);
+            $data['relationship_type'] = 'often_bought_with';
+        }
+
+        //Geo Tagging
+        $data['geo_price'] = ''; //TODO: implement later
+        $data['geo_availability'] = ''; //TODO: implement later
+
         // Add variants for configurable products
         if ($product->getTypeId() === 'configurable') {
             $data['variants'] = $this->getProductVariants($product);
@@ -197,10 +322,185 @@ class ProductFeedGenerator
     }
 
     /**
+     * Get Related Products
+     *
+     * @param ProductInterface $product
+     * @return string
+     */
+    private function getRelatedProducts(ProductInterface $product): string
+    {
+        /** @var \Magento\Catalog\Model\Product $product */
+        $relatedProducts = '';
+        $relatedItems = $product->getRelatedProducts();
+
+        if (!empty($relatedItems)) {
+            $relatedIds = [];
+            foreach ($relatedItems as $item) {
+                $relatedIds[] = $item->getSku();
+            }
+            $relatedProducts = implode(',', $relatedIds);
+        }
+
+        return $relatedProducts;
+    }
+
+    /**
+     * Get Weight Formatted
+     *
+     * @param ProductInterface $product
+     * @return string
+     */
+    public function getWeightFormatted(ProductInterface $product): string
+    {
+        /** @var \Magento\Catalog\Model\Product $product */
+        $weight = $product->getWeight();
+
+        if ($weight === null || $weight <= 0) {
+            return '';
+        }
+
+        $unit = $this->scopeConfig->getValue(
+            'general/locale/weight_unit',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
+
+        if (!$unit) {
+            $unit = 'kg';
+        }
+
+        return sprintf('%s %s', rtrim((string)$weight, '0.'), $unit);
+    }
+
+    /**
+     * Get Product Category
+     *
+     * @param ProductInterface $product
+     * @return string
+     * @throws \Magento\Framework\Exception\LocalizedException
+     */
+    private function getProductCategory(ProductInterface $product): string
+    {
+        /** @var \Magento\Catalog\Model\Product $product */
+        $categoryIds = $product->getCategoryIds();
+
+        if (empty($categoryIds)) {
+            return 'Uncategorized';
+        }
+
+        // Load categories
+        $categories = $this->categoryCollectionFactory->create()
+            ->addAttributeToSelect('name')
+            ->addAttributeToSelect('path')
+            ->addAttributeToFilter('entity_id', ['in' => $categoryIds])
+            ->addIsActiveFilter();
+
+        if ($categories->getSize() === 0) {
+            return 'Uncategorized';
+        }
+
+        $selected = null;
+        $maxDepth = 0;
+
+        foreach ($categories as $category) {
+            $depth = substr_count($category->getPath(), '/');
+
+            if ($depth > $maxDepth) {
+                $maxDepth = $depth;
+                $selected = $category;
+            }
+        }
+
+        if (!$selected) {
+            return 'Uncategorized';
+        }
+
+        // Build full path
+        $pathIds = explode('/', $selected->getPath());
+
+        $pathCategories = $this->categoryCollectionFactory->create()
+            ->addAttributeToSelect('name')
+            ->addAttributeToFilter('entity_id', ['in' => $pathIds])
+            ->addIsActiveFilter();
+
+        // Map for quick lookup
+        $pathMap = [];
+        foreach ($pathCategories as $cat) {
+            $pathMap[$cat->getId()] = $cat->getName();
+        }
+
+        $names = [];
+        foreach ($pathIds as $id) {
+            if (isset($pathMap[$id])) {
+                // Skip root category
+                if (strtolower($pathMap[$id]) === 'default category') {
+                    continue;
+                }
+                $names[] = $pathMap[$id];
+            }
+        }
+
+        // Combine using spec separator " > "
+        $final = implode(' > ', $names);
+
+        return $final !== '' ? $final : 'Uncategorized';
+    }
+
+    /**
+     * GetMaterial
+     *
+     * @param ProductInterface $product
+     * @return string
+     */
+    private function getMaterial(ProductInterface $product): string
+    {
+        /** @var \Magento\Catalog\Model\Product $product */
+        $value = $product->getData('material');
+
+        if (!$value) {
+            return 'unknown';
+        }
+
+        $text = $product->getAttributeText('material');
+
+        if (is_array($text)) {
+            $material = implode(', ', array_map('trim', $text));
+        } else {
+            $material = trim((string)$text);
+        }
+
+        if ($material === '') {
+            return 'unknown';
+        }
+
+        return mb_substr($material, 0, 100);
+    }
+
+    /**
+     * Get Condition
+     *
+     * @param ProductInterface $product
+     * @return string
+     */
+    private function getCondition(ProductInterface $product): string
+    {
+        /** @var \Magento\Catalog\Model\Product $product */
+        $value = strtolower((string)$product->getData('condition'));
+        return match ($value) {
+            'used',
+            'refurbished' => $value,
+            default => 'new',
+        };
+    }
+
+    /**
      * Get product price handling all product types
+     *
+     * @param ProductInterface $product
+     * @return float
      */
     private function getProductPrice(ProductInterface $product): float
     {
+        /** @var \Magento\Catalog\Model\Product $product */
         $price = 0.0;
 
         switch ($product->getTypeId()) {
@@ -208,11 +508,12 @@ class ProductFeedGenerator
             case 'virtual':
             case 'downloadable':
                 // Simple products have direct price
-                $price = (float)$product->getFinalPrice();
+                $price = (float)$product->getPrice();
                 break;
 
             case 'configurable':
                 // Get minimum price from child products
+                /** @phpstan-ignore-next-line */
                 $price = (float)$product->getPriceInfo()
                     ->getPrice('final_price')
                     ->getMinimalPrice()
@@ -221,6 +522,7 @@ class ProductFeedGenerator
 
             case 'bundle':
                 // Get minimum bundle price
+                /** @phpstan-ignore-next-line */
                 $price = (float)$product->getPriceInfo()
                     ->getPrice('final_price')
                     ->getMinimalPrice()
@@ -229,6 +531,7 @@ class ProductFeedGenerator
 
             case 'grouped':
                 // Get minimum price from associated products
+                /** @phpstan-ignore-next-line */
                 $price = (float)$product->getPriceInfo()
                     ->getPrice('final_price')
                     ->getMinimalPrice()
@@ -237,7 +540,7 @@ class ProductFeedGenerator
 
             default:
                 // Fallback to regular price
-                $price = (float)$product->getFinalPrice();
+                $price = (float)$product->getPrice();
         }
 
         return max($price, 0.0); // Ensure non-negative
@@ -245,6 +548,9 @@ class ProductFeedGenerator
 
     /**
      * Clean HTML from description for AI consumption
+     *
+     * @param string|null $description
+     * @return string
      */
     private function cleanDescription(?string $description): string
     {
@@ -254,45 +560,19 @@ class ProductFeedGenerator
 
         // Strip HTML tags
         $text = strip_tags($description);
-        
+
         // Remove extra whitespace
         $text = preg_replace('/\s+/', ' ', $text);
-        
+
         // Trim and limit length for AI context
-        $text = trim($text);
+        $text = trim((string)$text);
         return mb_substr($text, 0, 500);
     }
 
     /**
-     * Get product image URL
-     */
-    private function getProductImageUrl(ProductInterface $product): ?string
-    {
-        $image = $product->getImage();
-        if (empty($image) || $image === 'no_selection') {
-            return null;
-        }
-
-        $store = $this->storeManager->getStore();
-        return $store->getBaseUrl(UrlInterface::URL_TYPE_MEDIA) . 'catalog/product' . $image;
-    }
-
-    /**
-     * Get category names for product
-     */
-    private function getProductCategoryNames(ProductInterface $product): array
-    {
-        $categoryIds = $product->getCategoryIds();
-        if (empty($categoryIds)) {
-            return [];
-        }
-
-        // TODO: Load category names (requires category repository)
-        return $categoryIds;
-    }
-
-    /**
      * Get categories filter from config
+     *
+     * @return array <int, string>
      */
     private function getCategoriesFilter(): array
     {
@@ -305,41 +585,86 @@ class ProductFeedGenerator
     }
 
     /**
-     * Get all product images (not just primary)
+     * Get Main Image
+     *
+     * @param ProductInterface $product
+     * @return string|null
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
      */
-    private function getAllProductImages(ProductInterface $product): array
+    private function getMainImage(ProductInterface $product): ?string
     {
-        $images = [];
+        /** @var \Magento\Catalog\Model\Product $product */
         $store = $this->storeManager->getStore();
         $baseUrl = $store->getBaseUrl(UrlInterface::URL_TYPE_MEDIA) . 'catalog/product';
 
-        // Load gallery images
+        $image = $product->getImage();
+
+        if ($image && $image !== 'no_selection') {
+            return $baseUrl . $image;
+        }
+
         $this->galleryReadHandler->execute($product);
         $galleryImages = $product->getMediaGalleryImages();
 
-        if ($galleryImages) {
-            foreach ($galleryImages as $image) {
-                $images[] = $baseUrl . $image->getFile();
-            }
-        } elseif ($product->getImage() && $product->getImage() !== 'no_selection') {
-            // Fallback to primary image
-            $images[] = $baseUrl . $product->getImage();
+        if ($galleryImages && $galleryImages->getSize()) {
+            $first = $galleryImages->getFirstItem();
+            return $baseUrl . $first->getFile();
         }
 
-        return $images;
+        return null;
+    }
+
+    /**
+     * Get Additional Images
+     *
+     * @param ProductInterface $product
+     * @return array <int, string>
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
+     */
+    private function getAdditionalImages(ProductInterface $product): array
+    {
+        /** @var \Magento\Catalog\Model\Product $product */
+        $store = $this->storeManager->getStore();
+        $baseUrl = $store->getBaseUrl(UrlInterface::URL_TYPE_MEDIA) . 'catalog/product';
+
+        $this->galleryReadHandler->execute($product);
+        $galleryImages = $product->getMediaGalleryImages();
+
+        $mainImage = $product->getImage();
+        $result = [];
+
+        if ($galleryImages) {
+            foreach ($galleryImages as $image) {
+                $file = $image->getFile();
+
+                if ($file === $mainImage) {
+                    continue;
+                }
+
+                $result[] = $baseUrl . $file;
+            }
+        }
+
+        return $result;
     }
 
     /**
      * Get brand/manufacturer
+     *
+     * @param ProductInterface $product
+     * @return string|null
      */
     private function getBrand(ProductInterface $product): ?string
     {
-        $manufacturerId = $product->getData('manufacturer');
-        if ($manufacturerId) {
-            $attribute = $product->getResource()->getAttribute('manufacturer');
-            if ($attribute && $attribute->usesSource()) {
-                return $attribute->getSource()->getOptionText($manufacturerId);
+        /** @var \Magento\Catalog\Model\Product $product */
+        // get label của dropdown/multiselect attribute 'manufacturer'
+        $brand = $product->getAttributeText('manufacturer');
+
+        if ($brand) {
+            if (is_array($brand)) {
+                return implode(', ', $brand);
             }
+            return (string)$brand;
         }
 
         return null;
@@ -347,9 +672,13 @@ class ProductFeedGenerator
 
     /**
      * Get inventory quantity
+     *
+     * @param ProductInterface $product
+     * @return int
      */
     private function getInventoryQuantity(ProductInterface $product): int
     {
+        /** @var \Magento\Catalog\Model\Product $product */
         try {
             $stockItem = $this->stockRegistry->getStockItemBySku($product->getSku());
             return (int)$stockItem->getQty();
@@ -360,23 +689,26 @@ class ProductFeedGenerator
 
     /**
      * Get product variants for configurables
+     *
+     * @param ProductInterface $product
+     * @return array<int, array<string, mixed>>
      */
     private function getProductVariants(ProductInterface $product): array
     {
+        /** @var \Magento\Catalog\Model\Product $product */
         $variants = [];
 
         try {
             $childProducts = $this->configurableType->getUsedProducts($product);
 
             foreach ($childProducts as $child) {
+                /** @var \Magento\Catalog\Model\Product $child */
                 $variants[] = [
                     'id' => (string)$child->getId(),
                     'sku' => $child->getSku(),
                     'title' => $child->getName(),
-                    'price' => [
-                        'amount' => $this->convertToCents((float)$child->getFinalPrice()),
-                        'currency' => $this->storeManager->getStore()->getCurrentCurrency()->getCode()
-                    ],
+                    'price' => $this->formatPrice($child->getFinalPrice(), $this->currencyCode),
+                    'weight' => $this->getWeightFormatted($child),
                     'availability' => $child->isSalable() ? 'in_stock' : 'out_of_stock',
                     'inventory_quantity' => $this->getInventoryQuantity($child),
                 ];
@@ -390,11 +722,40 @@ class ProductFeedGenerator
     }
 
     /**
-     * Convert dollar amount to cents (integer)
-     * ACP spec requires monetary values as non-negative integers
+     * Format Price
+     *
+     * @param mixed $price
+     * @param string $currency
+     * @return string
      */
-    private function convertToCents(float $amount): int
+    private function formatPrice($price, string $currency): string
     {
-        return (int)round($amount * 100);
+        return number_format($price, 2, '.', '') . ' ' . $currency;
+    }
+
+    /**
+     * Get Sale Price
+     *
+     * @param ProductInterface $product
+     * @return float|null
+     */
+    private function getSalePrice(ProductInterface $product): ?float
+    {
+        /** @var \Magento\Catalog\Model\Product $product */
+        $specialPrice = $product->getSpecialPrice();
+
+        if (!$specialPrice) {
+            return null;
+        }
+
+        $from = $product->getSpecialFromDate();
+        $to   = $product->getSpecialToDate();
+        $now  = (new \DateTime())->format('Y-m-d H:i:s');
+
+        if (($from && $now < $from) || ($to && $now > $to)) {
+            return null;
+        }
+
+        return (float)$specialPrice;
     }
 }
