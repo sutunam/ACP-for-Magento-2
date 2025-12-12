@@ -23,6 +23,8 @@ use Magento\Framework\Serialize\SerializerInterface;
 use Magento\Framework\UrlInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use Magento\Catalog\Model\ResourceModel\Category\CollectionFactory as CategoryCollectionFactory;
+use RunAsRoot\AgenticCommerceProtocol\Helper\Data as Helper;
+use Magento\Review\Model\ReviewFactory;
 
 /**
  * Generates product feed for ChatGPT discovery
@@ -40,6 +42,11 @@ class ProductFeedGenerator
     private $currencyCode;
 
     /**
+     * @var array
+     */
+    private array $selectedCategories = [];
+
+    /**
      * Constructor
      *
      * @param CollectionFactory $productCollectionFactory
@@ -52,6 +59,8 @@ class ProductFeedGenerator
      * @param GalleryReadHandler $galleryReadHandler
      * @param Configurable $configurableType
      * @param CategoryCollectionFactory $categoryCollectionFactory
+     * @param Helper $helper
+     * @param ReviewFactory $reviewFactory
      */
     public function __construct(
         private readonly CollectionFactory $productCollectionFactory,
@@ -63,7 +72,9 @@ class ProductFeedGenerator
         private readonly StockRegistryInterface $stockRegistry,
         private readonly GalleryReadHandler $galleryReadHandler,
         private readonly Configurable $configurableType,
-        private readonly CategoryCollectionFactory $categoryCollectionFactory
+        private readonly CategoryCollectionFactory $categoryCollectionFactory,
+        private readonly Helper $helper,
+        private readonly ReviewFactory $reviewFactory
     ) {
     }
 
@@ -96,6 +107,11 @@ class ProductFeedGenerator
 
             $feed[] = $this->formatProduct($product);
         }
+
+        $privacyUrl = $this->helper->getPageUrl($this->helper->getSellerPrivacyPolicyPage());
+        $tosUrl = $this->helper->getPageUrl($this->helper->getSellerTosPage());
+        $returnUrl = $this->helper->getPageUrl($this->helper->getReturnPolicyPage());
+
         /** @var \Magento\Store\Model\Store $store */
         $store = $this->storeManager->getStore();
         $result = [
@@ -107,11 +123,11 @@ class ProductFeedGenerator
             // Merchant Info
             'seller_name' => $store->getName(),
             'seller_url' => $store->getBaseUrl(),
-            'seller_privacy_policy' => $store->getBaseUrl() . 'privacy', // create cms page for this field
-            'seller_tos' => $store->getBaseUrl() . 'terms', // create cms page for this field
+            'seller_privacy_policy' => $privacyUrl,
+            'seller_tos' => $tosUrl,
 
             //Returns
-            'return_policy' => $store->getBaseUrl() . 'returns', // create cms page for this field
+            'return_policy' => $returnUrl,
             'return_window' => 30,
         ];
 
@@ -179,6 +195,7 @@ class ProductFeedGenerator
         // Limit products
         $maxProducts = (int)$this->scopeConfig->getValue(self::CONFIG_PATH_MAX_PRODUCTS) ?: 1000;
         $collection->setPageSize($maxProducts);
+        $collection->addMediaGalleryData();
 
         return $collection->getItems();
     }
@@ -296,8 +313,10 @@ class ProductFeedGenerator
         $data['age_restriction'] = ''; //TODO: implement later
 
         //Reviews and Q&A
-        $data['product_review_count'] = ''; //TODO: implement later
-        $data['product_review_rating'] = ''; //TODO: implement later
+        $review = $this->getProductReviewSummary($product);
+
+        $data['product_review_rating'] = $review['rating'];
+        $data['product_review_count']  = $review['count'];
         $data['store_review_count'] = ''; //TODO: implement later
         $data['store_review_rating'] = ''; //TODO: implement later
         $data['q_and_a'] = ''; //TODO: implement later
@@ -306,7 +325,7 @@ class ProductFeedGenerator
         //Related Products
         if ($this->getRelatedProducts($product)) {
             $data['related_products'] = $this->getRelatedProducts($product);
-            $data['relationship_type'] = 'often_bought_with';
+            $data['relationship_type'] = 'often_bought_with'; //TODO: implement later
         }
 
         //Geo Tagging
@@ -319,6 +338,47 @@ class ProductFeedGenerator
         }
 
         return $data;
+    }
+
+    /**
+     * Get Product Review Summary
+     *
+     * @param ProductInterface $product
+     * @return array|int[]
+     */
+    private function getProductReviewSummary(\Magento\Catalog\Api\Data\ProductInterface $product): array
+    {
+        /** @var \Magento\Catalog\Model\Product $product */
+        $storeId   = (int)$product->getStoreId();
+        $productId = (int)$product->getId();
+
+        $this->reviewFactory->create()->getEntitySummary($product, $storeId);
+
+        $summary = $product->getRatingSummary();
+
+        if (!$summary) {
+            return [
+                'rating' => 0,
+                'count'  => 0,
+            ];
+        }
+
+        $ratingPercent = (int)$summary->getRatingSummary();
+        $reviewsCount  = (int)$summary->getReviewsCount();
+
+        if ($reviewsCount === 0 || $ratingPercent === 0) {
+            return [
+                'rating' => 0,
+                'count'  => 0,
+            ];
+        }
+
+        $rating = round($ratingPercent / 20, 1);
+
+        return [
+            'rating' => $rating,
+            'count'  => $reviewsCount,
+        ];
     }
 
     /**
@@ -413,14 +473,17 @@ class ProductFeedGenerator
         if (!$selected) {
             return 'Uncategorized';
         }
-
         // Build full path
         $pathIds = explode('/', $selected->getPath());
-
-        $pathCategories = $this->categoryCollectionFactory->create()
-            ->addAttributeToSelect('name')
-            ->addAttributeToFilter('entity_id', ['in' => $pathIds])
-            ->addIsActiveFilter();
+        if (!isset($this->selectedCategories[$maxDepth. '-' .$selected->getId()])) {
+            $pathCategories = $this->categoryCollectionFactory->create()
+                ->addAttributeToSelect('name')
+                ->addAttributeToFilter('entity_id', ['in' => $pathIds])
+                ->addIsActiveFilter();
+            $this->selectedCategories[$maxDepth. '-' .$selected->getId()] = $pathCategories;
+        } else {
+            $pathCategories = $this->selectedCategories[$maxDepth. '-' .$selected->getId()];
+        }
 
         // Map for quick lookup
         $pathMap = [];
@@ -627,22 +690,22 @@ class ProductFeedGenerator
         $store = $this->storeManager->getStore();
         $baseUrl = $store->getBaseUrl(UrlInterface::URL_TYPE_MEDIA) . 'catalog/product';
 
-        $this->galleryReadHandler->execute($product);
         $galleryImages = $product->getMediaGalleryImages();
+        if (!$galleryImages) {
+            return [];
+        }
 
         $mainImage = $product->getImage();
         $result = [];
 
-        if ($galleryImages) {
-            foreach ($galleryImages as $image) {
-                $file = $image->getFile();
+        foreach ($galleryImages as $image) {
+            $file = $image->getFile();
 
-                if ($file === $mainImage) {
-                    continue;
-                }
-
-                $result[] = $baseUrl . $file;
+            if ($file === $mainImage) {
+                continue;
             }
+
+            $result[] = $baseUrl . $file;
         }
 
         return $result;
